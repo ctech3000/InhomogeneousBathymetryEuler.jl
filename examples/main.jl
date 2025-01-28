@@ -14,7 +14,7 @@ grid, χs, σs, Dχ, Dσ = discretizeTransformedDomain(domain, trans, nχ=nχ, n
 #setup dofs
 ip = Lagrange{RefQuadrilateral, 1}()
 qr = QuadratureRule{RefQuadrilateral}(2)
-qr_facet = FacetQuadratureRule{RefQuadrilateral}(2)
+qr_facet = FacetQuadratureRule{RefQuadrilateral}(4)
 cellvalues = CellValues(qr, ip);
 facetvalues = FacetValues(qr_facet, ip)
 dh = DofHandler(grid)

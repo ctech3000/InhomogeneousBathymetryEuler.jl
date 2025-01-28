@@ -60,7 +60,7 @@ function compute_B_D(cellvalues::CellValues, facetvalues::FacetValues, dh::DofHa
         reinit!(facetvalues, facet)
         node_coords = getcoordinates(facet)
         n_q_points = getnquadpoints(facetvalues)
-        q_point_coords = spatial_coordinate.((facetvalues,), collect(1:n_q_points),(node_coords,))
+        #q_point_coords = spatial_coordinate.((facetvalues,), collect(1:n_q_points),(node_coords,))
         D_inflow_boundary[facet_idx] = Vector{Float64}(undef,n_q_points)
         for q_point = 1:n_q_points
             D_inflow_boundary[facet_idx][q_point] = abs(b_L)
