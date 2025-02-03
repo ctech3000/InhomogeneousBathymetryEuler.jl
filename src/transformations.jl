@@ -31,11 +31,13 @@ end
 function compute_B_D(cellvalues::CellValues, facetvalues::FacetValues, dh::DofHandler, domain::AbstractDomain, trans::σTransform)
     b_L = domain.b_L
     nCells = length(dh.grid.cells)
-    nFacets = length(getfacetset(dh.grid,"right"))
+    nFacets_inflow = length(getfacetset(dh.grid,"right"))
+    nFacets_surface = length(getfacetset(dh.grid,"bottom"))
     B_domain = Vector{Vector{Float64}}(undef,nCells)
     B_tilde_domain = Vector{Vector{Float64}}(undef,nCells)
     D_domain = Vector{Vector{Float64}}(undef,nCells)
-    D_inflow_boundary = Vector{Vector{Float64}}(undef,nFacets)
+    D_inflow_boundary = Vector{Vector{Float64}}(undef,nFacets_inflow)
+    D_surface_boundary = Vector{Vector{Float64}}(undef,nFacets_surface)
 
     for cell in CellIterator(dh)
         reinit!(cellvalues, cell)
@@ -67,5 +69,16 @@ function compute_B_D(cellvalues::CellValues, facetvalues::FacetValues, dh::DofHa
         end
     end
 
-    return B_domain, B_tilde_domain, D_domain, D_inflow_boundary
+    for (facet_idx, facet) in enumerate(FacetIterator(dh, getfacetset(dh.grid,"bottom")))
+        reinit!(facetvalues, facet)
+        node_coords = getcoordinates(facet)
+        n_q_points = getnquadpoints(facetvalues)
+        #q_point_coords = spatial_coordinate.((facetvalues,), collect(1:n_q_points),(node_coords,))
+        D_surface_boundary[facet_idx] = Vector{Float64}(undef,n_q_points)
+        for q_point = 1:n_q_points
+            D_surface_boundary[facet_idx][q_point] = abs(b_L)
+        end
+    end
+
+    return B_domain, B_tilde_domain, D_domain, D_inflow_boundary, D_surface_boundary
 end

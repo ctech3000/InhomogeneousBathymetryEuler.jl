@@ -30,10 +30,10 @@ function assemble_K_element!(Ke::Matrix, cellvalues::CellValues, Be::Vector, B_t
         B_tilde_point = B_tilde_e[q_point]
         D_point = De[q_point]
         for j in 1:n_basefuncs
-            ψj_dχ, ψj_dσ  = shape_gradient(cellvalues, q_point, j)
+            Nj_dχ, Nj_dσ  = shape_gradient(cellvalues, q_point, j)
             for i in 1:n_basefuncs
-                ψi_dχ, ψi_dσ = shape_gradient(cellvalues, q_point, i)
-                Ke[j, i] += (ψi_dχ*ψj_dχ - B_point*ψi_dχ*ψj_dσ - B_point*ψi_dσ*ψj_dχ  + B_tilde_point*ψi_dσ*ψj_dσ)*D_point*dΩ
+                Ni_dχ, Ni_dσ = shape_gradient(cellvalues, q_point, i)
+                Ke[j, i] += (Ni_dχ*Nj_dχ - B_point*Ni_dχ*Nj_dσ - B_point*Ni_dσ*Nj_dχ  + B_tilde_point*Ni_dσ*Nj_dσ)*D_point*dΩ
             end
         end
     end
@@ -57,6 +57,60 @@ function assemble_K_global(cellvalues::CellValues, dh::DofHandler, domain::Abstr
     return K
 end
 
+function assemble_Ms_element!(M_T0e::Matrix, M_T1e::Matrix, M_T2e::Matrix, De::Vector, facetvalues::FacetValues, facet::FacetCache, domain::AbstractDomain, trans::σTransform)
+    fill!(M_T0e,0)
+    fill!(M_T1e,0)
+    fill!(M_T2e,0)
+    n_basefuncs = getnbasefunctions(facetvalues)
+    node_coords = getcoordinates(facet)
+    n_q_points = getnquadpoints(facetvalues)
+    q_point_coords = spatial_coordinate.((facetvalues,), collect(1:n_q_points),(node_coords,))
+    if isa(domain,DampedDomainProperties)
+        μ_D_disc = [domain.μ_D(trans.x(q_point_coords[q_point][1])) for q_point = 1:n_q_points]
+    else
+        μ_D_disc = zeros(Float64, n_q_points)
+    end
+    for q_point = 1:n_q_points
+        dS = getdetJdV(facetvalues, q_point)
+        D_point = De[q_point]
+        for j in 1:n_basefuncs
+            Nj = shape_value(facetvalues, q_point, j)
+            for i in 1:n_basefuncs
+                Ni = shape_value(facetvalues, q_point, i)
+                M_T0e[i,j] = Ni*Nj*De[q_point]*dS
+                M_T1e[i,j] = Ni*μ_D_disc[q_point]*Nj*De[q_point]*dS
+                M_T2e[i,j] = Ni*μ_D_disc[q_point]^2*Nj*De[q_point]*dS
+            end
+        end
+    end
+
+    return M_T0e, M_T1e, M_T2e
+
+end
+
+function assemble_Ms_global(facetvalues::FacetValues, dh::DofHandler, D_surface_boundary::Vector{Vector{Float64}}, domain::AbstractDomain,trans::σTransform)
+    M_T0 = allocate_matrix(dh)
+    M_T1 = allocate_matrix(dh)
+    M_T2 = allocate_matrix(dh)
+    n_basefuncs = getnbasefunctions(facetvalues)
+    M_T0e = zeros(n_basefuncs,n_basefuncs)
+    M_T1e = zeros(n_basefuncs,n_basefuncs)
+    M_T2e = zeros(n_basefuncs,n_basefuncs)
+    assembler0 = start_assemble(M_T0)
+    assembler1 = start_assemble(M_T1)
+    assembler2 = start_assemble(M_T2)
+    for (facet_idx,facet) in enumerate(FacetIterator(dh,getfacetset(dh.grid,"bottom")))
+        reinit!(facetvalues,facet)
+        De = D_surface_boundary[facet_idx]
+        M_T0e, M_T1e, M_T2e = assemble_Ms_element!(M_T0e,M_T1e,M_T2e,De,facetvalues,facet,domain,trans)
+        assemble!(assembler0,celldofs(facet),M_T0e)
+        assemble!(assembler1,celldofs(facet),M_T1e)
+        assemble!(assembler2,celldofs(facet),M_T2e)
+    end
+
+    return M_T0, M_T1, M_T2
+end
+
 function assemble_f_element!(fe::Vector, facetvalues::FacetValues, facet::FacetCache, De::Vector, trans::σTransform, wave::AbstractWave, t_p::Real)
     n_basefuncs = getnbasefunctions(facetvalues)
     fill!(fe,0)
@@ -73,8 +127,8 @@ function assemble_f_element!(fe::Vector, facetvalues::FacetValues, facet::FacetC
         #phi_g_dx = 2
 
         for j in 1:n_basefuncs
-            ψj = shape_value(facetvalues, q_point, j)
-            fe[j] += -(ψj*phi_g_dx*D_point)*dS
+            Nj = shape_value(facetvalues, q_point, j)
+            fe[j] += -(Nj*phi_g_dx*D_point)*dS
         end
     end
 end
@@ -99,7 +153,7 @@ function assemble_f_global(facetvalues::FacetValues, dh::DofHandler, D_inflow_bo
     return f
 end
 
-function init_K_f(cellvalues::CellValues, facetvalues::FacetValues, dh::DofHandler,domain::AbstractDomain,B_domain::Vector{Vector{Float64}}, B_tilde_domain::Vector{Vector{Float64}}, D_domain::Vector{Vector{Float64}}, D_inflow_boundary::Vector{Vector{Float64}}, trans::σTransform, wave::AbstractWave, χs::Vector{T}) where T<:Real
+function init_K_f(cellvalues::CellValues, facetvalues::FacetValues, dh::DofHandler,domain::AbstractDomain,B_domain::Vector{Vector{Float64}}, B_tilde_domain::Vector{Vector{Float64}}, D_domain::Vector{Vector{Float64}}, D_inflow_boundary::Vector{Vector{Float64}}, trans::σTransform, χs::Vector{T}) where T<:Real
     K = assemble_K_global(cellvalues,dh,domain,B_domain,B_tilde_domain,D_domain)
     f = assemble_f_global(facetvalues,dh,D_inflow_boundary,trans,domain.wave,0.0)
     K_init = deepcopy(K)
@@ -112,6 +166,30 @@ function init_K_f(cellvalues::CellValues, facetvalues::FacetValues, dh::DofHandl
     apply!(K,f,ch)
 
     return K, K_init, ch
+end
+
+function init_K_M(cellvalues::CellValues, facetvalues::FacetValues, dh::DofHandler,domain::AbstractDomain,B_domain::Vector{Vector{Float64}}, B_tilde_domain::Vector{Vector{Float64}}, D_domain::Vector{Vector{Float64}}, D_inflow_boundary::Vector{Vector{Float64}}, D_surface_boundary::Vector{Vector{Float64}}, trans::σTransform, outflow::OutflowBC, timeMethod::AbstractTimeSteppingMethod, time_vec::Vector, nσ::Int)
+    Dt = time_vec[2] - time_vec[1]
+    K = assemble_K_global(cellvalues,dh,domain,B_domain,B_tilde_domain,D_domain)
+    f = assemble_f_global(facetvalues,dh,D_inflow_boundary,trans,domain.wave,0.0)
+    M_T0, M_T1, M_T2 = assemble_Ms_global(facetvalues,dh,D_surface_boundary,domain,trans)
+
+    LHS_matrix = compute_LHS_matrix(K, M_T0, M_T1, M_T2, Dt, timeMethod)
+    LHS_matrix_init = deepcopy(LHS_matrix)
+    
+
+    if outflow.type == "Dirichlet"
+        ch = ConstraintHandler(dh)
+        dbc = dirichlet_from_discretized_data(dh.grid, :phi, "left", zeros(Float64, nσ+1)) # "left", because in transformed domain coordinates are flipped
+        add!(ch, dbc);
+        close!(ch)
+        apply!(LHS_matrix,f,ch)
+    elseif outflow.type == "Neumann"
+        ch = ConstraintHandler(dh)
+        close!(ch)
+        apply!(LHS_matrix,f,ch)
+    end
+    return K, M_T0, M_T1, M_T2, LHS_matrix, LHS_matrix_init, ch
 end
 
 #= function to apply Dirichlet data on prescribed dofs. 

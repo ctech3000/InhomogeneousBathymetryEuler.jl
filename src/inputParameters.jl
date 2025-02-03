@@ -119,3 +119,20 @@ function DampedDomainProperties(bathymetryPoints::Vector{Float64})
     return DampedDomainProperties(wave,bathymetryPoints)
 end
 
+abstract type AbstractTimeSteppingMethod end
+
+struct BackwardDiff <: AbstractTimeSteppingMethod end
+
+struct OutflowBC 
+    type::String
+end
+
+function OutflowBC(val::Int)
+    if val == 0
+        return OutflowBC("Dirichlet")
+    elseif val == 1
+        return OutflowBC("Neumann")
+    else
+        print("Not a valid input for OutflowBC!")
+    end
+end
