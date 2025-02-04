@@ -4,25 +4,31 @@ include("helpfulFunctions.jl") =#
 abstract type AbstractWave end
 
 struct SimpleWave <: AbstractWave
-    amp::Float64
-    freq::Float64
-    phase::Float64
+    amp::Real
+    freq::Real
+    phase::Real
     fadeIn::Function
     hasFadeIn::Bool
+end
+
+function SimpleWave(amp::Real,freq::Real,phase::Real;hasFadeIn=true)
+    T = 2*pi/freq
+
+    fadeIn(t) = hasFadeIn ? (t < 2*T ? 1/2*(1-cos(pi*t/(2*T))) : 1.0) : 1.0
+    
+    return SimpleWave(amp, freq, phase, fadeIn, hasFadeIn)
 end
 
 function SimpleWave() 
     amp = 0.0053740783
     freq = 2.199114857512855
     phase = 2.7
-    T = 2*pi/freq
-    fadeInFunction(t) = t < 2*T ? 1/2*(1-cos(pi*t/(2*T))) : 1
-    return SimpleWave(amp, freq, phase, fadeInFunction, true)
+    return SimpleWave(amp, freq, phase, hasFadeIn=true)
 end
 
 function SimpleWave(str::String)
     if str == "noFadeIn"
-        return SimpleWave(0.0053740783,2.199114857512855,2.7,x->1*x,false)
+        return SimpleWave(0.0053740783,2.199114857512855,2.7,hasFadeIn=false)
     elseif str == "fadeIn"
         return SimpleWave()
     end
@@ -102,7 +108,11 @@ end
 
 function DampedDomainProperties(x_L::Float64, x_D::Float64, x_R::Float64, bath::Bathymetry, wave::AbstractWave)
     b_L = eval_bath(bath,x_L)
-    μ_D(x) = x<x_D ? 0.0 : Float64(wave.freq*((x-x_D)/(x_R-x_D))^2)
+    L = x_R - x_D
+    λ = 2*pi/computeWaveNumber(wave.freq,b_L)
+    μ₀ = -g*log(0.5*10^-5)/(2*wave.freq*L)*sqrt(λ/g)
+    μ_D(x) = x<x_D ? 0.0 : μ₀*sqrt(g/λ)*(-2*((x-x_D)/L)^3 + 3*((x-x_D)/L)^2)
+    #μ_D(x) = x<x_D ? 0.0 : Float64(wave.freq*((x-x_D)/(x_R-x_D))^2)
     return DampedDomainProperties(x_L,x_D,x_R,bath,b_L,wave,μ_D)
 end
 

@@ -1,23 +1,24 @@
-
+using GLMakie
+using InhomogeneousBathymetryEuler
 # test solution 
-p = 40
+p = 800
 t_p = time_vec[p]
 phi_mat = all_phis[p]
-phi_surface_vec = all_phi_surface[p]
+#phi_surface_vec = all_phi_surface[p]
 
 # plot computed phi_surface 
-f_surface = Figure()
+#= f_surface = Figure()
 ax_surface = Axis(f_surface[1, 1],xlabel="χ",ylabel="ϕ")
-lines!(ax_surface,χs,phi_surface_vec)
+lines!(ax_surface,χs,phi_surface_vec) =#
 
 # test whether Dirichlet cond on surface is fulfilled
-sol_top = phi_mat[:,1]
+#= sol_top = phi_mat[:,1]
 ana = transformedAnalyticPotential(χs,0*χs,t_p,2.0,wave,trans)
 diff1 = abs.(sol_top - ana)
 f_top = Figure()
 ax_top = Axis(f_top[1, 1])
 lines!(ax_top,χs,diff1)
-# checks out
+# checks out =#
 
 # test whether Neumann = 0 is fulfilled on outflow boundary
 dx_outflow, _ = computeDerivativeOnBoundary(phi_mat, Dχ, Dσ, χs[1]*ones(size(σs)), σs, domain, trans, "left", "physical")
@@ -32,7 +33,7 @@ dx_floor, dz_floor = computeDerivativeOnBoundary(phi_mat, Dχ, Dσ, χs, ones(si
 xs = trans.x(χs)
 normal = Vector{Vector{Float64}}(undef,length(xs))
 for (i,x) in enumerate(xs)
-    normal[i] = 1/sqrt(1+eval(bath,x,1)^2)*[eval(bath,x,1),-1]
+    normal[i] = 1/sqrt(1+eval_bath(bath,x,1)^2)*[eval_bath(bath,x,1),-1]
 end
 dn_floor = [dx_floor[i]*normal[i][1]+dz_floor[i]*normal[i][2] for i=1:length(xs)]
 diff3 = abs.(dn_floor)
@@ -55,7 +56,7 @@ f
 # checks out
 
 # test with finite differences wheter laplace eq. is fulfilled
-lap = laplace(phi_mat, Dχ, Dσ, domain)
+lap = InhomogeneousBathymetryEuler.laplace(phi_mat, Dχ, Dσ, domain)
 f1 = Figure()
 ax1 = Axis3(f1[1, 1], xlabel = "χ", ylabel = "σ", zlabel = "Δϕ")
 surface!(ax1,χs[2:end-1],σs[2:end-1],lap)
@@ -63,7 +64,7 @@ f1
 # laplace is fulfilled everywhere except at corner outflow/surface
 
 # plot solution
-f2 = Figure()
+#= f2 = Figure()
 ax2 = Axis3(f2[1, 1], xlabel = "χ", ylabel = "σ", zlabel = "ϕ")
 surface!(ax2,χs,σs,phi_mat)
-f2
+f2 =#

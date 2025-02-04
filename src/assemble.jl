@@ -78,7 +78,7 @@ function assemble_Ms_element!(M_T0e::Matrix, M_T1e::Matrix, M_T2e::Matrix, De::V
             for i in 1:n_basefuncs
                 Ni = shape_value(facetvalues, q_point, i)
                 M_T0e[i,j] = Ni*Nj*De[q_point]*dS
-                M_T1e[i,j] = Ni*μ_D_disc[q_point]*Nj*De[q_point]*dS
+                M_T1e[i,j] = Ni*2*μ_D_disc[q_point]*Nj*De[q_point]*dS
                 M_T2e[i,j] = Ni*μ_D_disc[q_point]^2*Nj*De[q_point]*dS
             end
         end
@@ -124,8 +124,6 @@ function assemble_f_element!(fe::Vector, facetvalues::FacetValues, facet::FacetC
         σ = q_point_coords[q_point][2]
         h = -eval_bath(trans.tBath,χ,0)
         phi_g_dx = analyticPotential_dx(trans.x(χ),trans.z(χ,σ),t_p,h,wave)
-        #phi_g_dx = 2
-
         for j in 1:n_basefuncs
             Nj = shape_value(facetvalues, q_point, j)
             fe[j] += -(Nj*phi_g_dx*D_point)*dS

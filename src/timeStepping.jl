@@ -110,7 +110,7 @@ function solve_all_timesteps(LHS_matrix::SparseMatrixCSC, LHS_matrix_init::Spars
     else
         return all_etas
     end
-end
+end;
 
 #= function solve_all_timesteps(K::SparseMatrixCSC, K_init::SparseMatrixCSC, domain::AbstractDomain, trans::σTransform, χs::Vector{Float64}, σs::Vector{Float64}, time_vec::Vector{Float64}, facetvalues::FacetValues, dh::DofHandler, ch::ConstraintHandler, D_inflow_boundary::Vector{Vector{Float64}}; save_phi::Bool=false)
     nχ = length(χs) - 1

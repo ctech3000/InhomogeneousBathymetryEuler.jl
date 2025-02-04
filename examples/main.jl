@@ -2,18 +2,18 @@ using InhomogeneousBathymetryEuler
 using Ferrite
 
 timeMethod = BackwardDiff()
-outflow = OutflowBC("Dirichlet")
-bathPoints = collect(LinRange(0,10,200))
-bathVals = -0.3*ones(Float64,200)
+outflow = OutflowBC("Neumann")
+bathPoints = collect(LinRange(0,3*8.5,801))
+bathVals = -1.0*ones(Float64,801)
 bath = Bathymetry(bathPoints,bathVals)
 wave = SimpleWave()
-#domain = DomainProperties(0.0,10.0,bath,wave)
-domain = DampedDomainProperties(0.0,5.0,10.0,bath,wave)
+#domain = DomainProperties(0.0,15.0,bath,wave)
+domain = DampedDomainProperties(0.0,8.5,3*8.5,bath,wave)
 trans = σTransform(domain)
-nχ = 3
-nσ = 3
+nχ = 800
+nσ = 32
 grid, χs, σs, Dχ, Dσ = discretizeTransformedDomain(domain, trans, nχ=nχ, nσ=nσ)
-time_vec = collect(0:0.05:10)
+time_vec = collect(0:0.05:30)
 
 #setup dofs
 ip = Lagrange{RefQuadrilateral, 1}()
@@ -25,14 +25,11 @@ dh = DofHandler(grid)
 add!(dh, :phi, ip)
 close!(dh);
 
-t_p = 0.0
 B_domain, B_tilde_domain, D_domain, D_inflow_boundary, D_surface_boundary = compute_B_D(cellvalues,facetvalues,dh,domain,trans)
 
 #K, K_init, ch = init_K_f(cellvalues,facetvalues,dh,domain,B_domain,B_tilde_domain,D_domain,D_inflow_boundary,trans,χs)
 
 K, M_T0, M_T1, M_T2, LHS_matrix, LHS_matrix_init, ch = init_K_M(cellvalues, facetvalues, dh,domain,B_domain, B_tilde_domain, D_domain, D_inflow_boundary, D_surface_boundary, trans, outflow, timeMethod, time_vec, nσ)
 
-
-
-all_etas, all_phis = solve_all_timesteps(LHS_matrix, LHS_matrix_init, M_T0, M_T1, domain, trans, χs, σs, time_vec, timeMethod, facetvalues, dh, ch, outflow, D_inflow_boundary, save_phi=true)
+all_etas, all_phis = solve_all_timesteps(LHS_matrix, LHS_matrix_init, M_T0, M_T1, domain, trans, χs, σs, time_vec, timeMethod, facetvalues, dh, ch, outflow, D_inflow_boundary, save_phi=true);
 #all_etas, all_phis, all_phi_surface = solve_all_timesteps(K,K_init,domain,trans,χs,σs,time_vec,facetvalues,dh,ch,D_inflow_boundary,save_phi=true)
