@@ -77,9 +77,9 @@ function assemble_Ms_element!(M_T0e::Matrix, M_T1e::Matrix, M_T2e::Matrix, De::V
             Nj = shape_value(facetvalues, q_point, j)
             for i in 1:n_basefuncs
                 Ni = shape_value(facetvalues, q_point, i)
-                M_T0e[i,j] = Ni*Nj*De[q_point]*dS
-                M_T1e[i,j] = Ni*2*μ_D_disc[q_point]*Nj*De[q_point]*dS
-                M_T2e[i,j] = Ni*μ_D_disc[q_point]^2*Nj*De[q_point]*dS
+                M_T0e[i,j] = Ni*Nj*D_point*dS
+                M_T1e[i,j] = Ni*2*μ_D_disc[q_point]*Nj*D_point*dS
+                M_T2e[i,j] = Ni*μ_D_disc[q_point]^2*Nj*D_point*dS
             end
         end
     end

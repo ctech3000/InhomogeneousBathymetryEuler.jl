@@ -1,15 +1,15 @@
 using GLMakie
 using InhomogeneousBathymetryEuler
 # test solution 
-p = 800
+p = 2
 t_p = time_vec[p]
 phi_mat = all_phis[p]
-#phi_surface_vec = all_phi_surface[p]
+phi_surface_vec = all_phis[p][:,1]
 
 # plot computed phi_surface 
-#= f_surface = Figure()
-ax_surface = Axis(f_surface[1, 1],xlabel="χ",ylabel="ϕ")
-lines!(ax_surface,χs,phi_surface_vec) =#
+f_surface = Figure()
+ax_surface = Axis(f_surface[1, 1],xlabel="χ",ylabel="ϕ",title="ϕ on surface")
+lines!(ax_surface,χs,phi_surface_vec)
 
 # test whether Dirichlet cond on surface is fulfilled
 #= sol_top = phi_mat[:,1]
@@ -48,7 +48,7 @@ zs = trans.z(χs[end]*ones(size(σs)), σs)
 dn_ana_inflow = analyticPotential_dx(xs, zs, t_p, -domain.b_L, wave)
 diff4 = abs.(dn_inflow - dn_ana_inflow)
 f = Figure()
-ax = Axis(f[1, 1], xlabel = "z", ylabel = "∇ϕ⋅n")
+ax = Axis(f[1, 1], xlabel = "z", ylabel = "∇ϕ⋅n",title="inflow BC")
 lines!(ax, zs, dn_inflow, label="num")
 lines!(ax, zs, dn_ana_inflow, label="ana")
 axislegend(position = :lt)
@@ -58,7 +58,7 @@ f
 # test with finite differences wheter laplace eq. is fulfilled
 lap = InhomogeneousBathymetryEuler.laplace(phi_mat, Dχ, Dσ, domain)
 f1 = Figure()
-ax1 = Axis3(f1[1, 1], xlabel = "χ", ylabel = "σ", zlabel = "Δϕ")
+ax1 = Axis3(f1[1, 1], xlabel = "χ", ylabel = "σ", zlabel = "Δϕ",title="Laplace in domain")
 surface!(ax1,χs[2:end-1],σs[2:end-1],lap)
 f1
 # laplace is fulfilled everywhere except at corner outflow/surface
