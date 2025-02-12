@@ -51,21 +51,22 @@ function Bathymetry(points::Vector{Float64})
 end
 
 function eval_bath(bath::Bathymetry, x::Real, der::Int=0)
+    x=clamp(x,minimum(bath.points),maximum(bath.points))
     if der == 0
         interp = linear_interpolation(bath.points, bath.vals)
     elseif der == 1
         interp = linear_interpolation(bath.points, bath.derivative)
+    elseif der == 2
+        print("here\n")
+        second_der = firstDerivative(bath.derivative,bath.points[2]-bath.points[1])
+        interp = linear_interpolation(bath.points,second_der)
     end
     return interp(x)
 end
 
 function eval_bath(bath::Bathymetry, x::Vector{T}, der::Int=0) where T<:Real
-    if der == 0
-        interp = linear_interpolation(bath.points, bath.vals)
-    elseif der == 1
-        interp = linear_interpolation(bath.points, bath.derivative)
-    end
-    return interp(x)
+    print("here\n")
+    return eval_bath.((bath,),x,(der,))
 end
 
 abstract type AbstractDomain end

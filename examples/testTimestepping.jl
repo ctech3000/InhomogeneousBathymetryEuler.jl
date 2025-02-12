@@ -1,7 +1,7 @@
 using GLMakie
 using InhomogeneousBathymetryEuler
 # test solution 
-p = 2
+p = 200
 t_p = time_vec[p]
 phi_mat = all_phis[p]
 phi_surface_vec = all_phis[p][:,1]

@@ -11,6 +11,8 @@ export compute_σ_derivative_on_free_surface, compute_new_dirichlet_data, comput
 export σTransform, compute_B_D
 export computeDerivativeOnBoundary, laplace
 export g
+export TrueSolution, assemble_f_global, assemble_g_global, coefficientVector, assemble_h_global
+
 
 include("helpfulFunctions.jl")
 include("inputParameters.jl")
@@ -20,5 +22,6 @@ include("domainDiscretization.jl")
 include("assemble.jl")
 include("timeStepping.jl")
 include("testSolution.jl")
+include("manufacturedSolution.jl")
 
 end
