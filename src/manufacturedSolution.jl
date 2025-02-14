@@ -50,14 +50,14 @@ end
 function assemble_g_global(facetvalues::FacetValues, dh::DofHandler, D_inflow_boundary::Vector{Vector{Float64}}, trans::σTransform, u::TrueSolution)
     n_basefuncs = getnbasefunctions(facetvalues)
     ge = zeros(n_basefuncs)
-    gg = zeros(ndofs(dh))
+    g = zeros(ndofs(dh))
     for (facet_idx, facet) in enumerate(FacetIterator(dh, getfacetset(dh.grid, "right")))
         reinit!(facetvalues, facet)
         De = D_inflow_boundary[facet_idx]
         assemble_g_element!(ge, facetvalues, facet, De, trans, u)
-        insert_into_f!(gg, ge, facetvalues, facet)
+        insert_into_f!(g, ge, facetvalues, facet)
     end
-    return gg
+    return g
 end
 
 function assemble_g_element!(ge::Vector, facetvalues::FacetValues, facet::FacetCache, De::Vector, trans::σTransform, u::TrueSolution)

@@ -7,12 +7,12 @@ include("transformations.jl") =#
     derivative wrt physical or transformed coordinates (eg ..._dx vs ..._dχ)
     h is the depth of the water as in Newman, hence it's a positive number so h = -bath
     =#
-const global g = 9.81
+const global GRAV = 9.81
 
 function computeWaveNumber(freq::Real,h::Real)
     k = 1
     for i = 1:1000
-        k = freq^2/(g*tanh(k*h))
+        k = freq^2/(GRAV*tanh(k*h))
     end
     return k
 end
@@ -25,7 +25,7 @@ function analyticPotential(x::Real, z::Real, t::Real, h::Real, wave::SimpleWave)
     freq = wave.freq
     phase = wave.phase
     k = computeWaveNumber(freq,h)
-    return g*amp/freq*cosh(k*(z+h))/cosh(k*h)*sin(k*x - freq*t - phase)
+    return GRAV*amp/freq*cosh(k*(z+h))/cosh(k*h)*sin(k*x - freq*t - phase)
 end
 
 function analyticPotential(x::Vector{T}, z::Vector{T}, t::Real, h::Real, wave::SimpleWave) where T<:Real
@@ -40,7 +40,7 @@ function analyticPotential_dx(x::Real, z::Real, t::Real, h::Real, wave::SimpleWa
     freq = wave.freq
     phase = wave.phase
     k = computeWaveNumber(freq,h)
-    return k*g*amp/freq*cosh(k*(z+h))/cosh(k*h)*cos(k*x - freq*t - phase)
+    return k*GRAV*amp/freq*cosh(k*(z+h))/cosh(k*h)*cos(k*x - freq*t - phase)
 end
 
 function analyticPotential_dx(x::Vector{T}, z::Vector{T}, t::Real, h::Real, wave::SimpleWave) where T<:Real
@@ -55,7 +55,7 @@ function analyticPotential_dz(x::Real, z::Real, t::Real, h::Real, wave::SimpleWa
     freq = wave.freq
     phase = wave.phase
     k = computeWaveNumber(freq,h)
-    return k*g*amp/freq*sinh(k*(z+h))/cosh(k*h)*sin(k*x - freq*t - phase)
+    return k*GRAV*amp/freq*sinh(k*(z+h))/cosh(k*h)*sin(k*x - freq*t - phase)
 end
 
 function analyticPotential_dz(x::Vector{T}, z::Vector{T}, t::Real, h::Real, wave::SimpleWave) where T<:Real

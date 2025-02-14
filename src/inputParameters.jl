@@ -111,8 +111,8 @@ function DampedDomainProperties(x_L::Float64, x_D::Float64, x_R::Float64, bath::
     b_L = eval_bath(bath,x_L)
     L = x_R - x_D
     λ = 2*pi/computeWaveNumber(wave.freq,b_L)
-    μ₀ = -g*log(0.5*10^-5)/(2*wave.freq*L)*sqrt(λ/g)
-    μ_D(x) = x<x_D ? 0.0 : μ₀*sqrt(g/λ)*(-2*((x-x_D)/L)^3 + 3*((x-x_D)/L)^2)
+    μ₀ = -GRAV*log(0.5*10^-5)/(2*wave.freq*L)*sqrt(λ/GRAV)
+    μ_D(x) = x<x_D ? 0.0 : μ₀*sqrt(GRAV/λ)*(-2*((x-x_D)/L)^3 + 3*((x-x_D)/L)^2)
     #μ_D(x) = x<x_D ? 0.0 : Float64(wave.freq*((x-x_D)/(x_R-x_D))^2)
     return DampedDomainProperties(x_L,x_D,x_R,bath,b_L,wave,μ_D)
 end

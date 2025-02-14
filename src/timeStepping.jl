@@ -7,11 +7,11 @@ include("assemble.jl")
  =#
 
 function compute_LHS_matrix(K::SparseMatrixCSC, M_T0::SparseMatrixCSC, M_T1::SparseMatrixCSC, M_T2::SparseMatrixCSC, Dt::Real, timeMethod::BackwardDiff)
-    return g*K + M_T2 + 3/(2*Dt)*M_T1 + 2/Dt^2*M_T0
+    return GRAV*K + M_T2 + 3/(2*Dt)*M_T1 + 2/Dt^2*M_T0
 end
 
 function compute_RHS(f::Vector{Float64},M_T0::SparseMatrixCSC, M_T1::SparseMatrixCSC, phi_curr::Vector{Float64}, phi_old::Vector{Float64}, phi_oldold::Vector{Float64}, Dt::Real, timeMethod::BackwardDiff)
-    return g*f + (2/Dt*M_T1 + 5/Dt^2*M_T0)*phi_curr - (1/(2*Dt)*M_T1 + 4/Dt^2*M_T0)*phi_old + 1/Dt^2*M_T0*phi_oldold
+    return GRAV*f + (2/Dt*M_T1 + 5/Dt^2*M_T0)*phi_curr - (1/(2*Dt)*M_T1 + 4/Dt^2*M_T0)*phi_old + 1/Dt^2*M_T0*phi_oldold
 end
 
 function compute_σ_derivative_on_free_surface(phi::Vector{Float64},Dσ::Real, nχ::Int)
@@ -25,7 +25,7 @@ function compute_new_dirichlet_data(phi_curr::Vector{Float64}, phi_old::Vector{F
     phi_dσ = compute_σ_derivative_on_free_surface(phi_curr,Dσ,nχ)
     μ_D_disc = domain.μ_D.(trans.x.(χs))
     bath_disc = eval_bath(trans.tBath,χs)
-    phi_surface_new = 1 ./(1/Dt^2 .+ 2*μ_D_disc/Dt).*(phi_surface_curr.*(2/Dt^2 .+ 2*μ_D_disc/Dt .- μ_D_disc.^2) .- phi_surface_old/Dt^2 .- g./bath_disc.*phi_dσ)
+    phi_surface_new = 1 ./(1/Dt^2 .+ 2*μ_D_disc/Dt).*(phi_surface_curr.*(2/Dt^2 .+ 2*μ_D_disc/Dt .- μ_D_disc.^2) .- phi_surface_old/Dt^2 .- GRAV./bath_disc.*phi_dσ)
 
     return phi_surface_new
 end
@@ -36,7 +36,7 @@ function compute_new_dirichlet_data(phi_curr::Vector{Float64}, phi_old::Vector{F
     phi_dσ = compute_σ_derivative_on_free_surface(phi_curr,Dσ,nχ)
     bath_disc = eval_bath(trans.tBath,χs)
 
-    phi_surface_new = 2*phi_surface_curr .- phi_surface_old .- Dt^2*g./bath_disc.*phi_dσ
+    phi_surface_new = 2*phi_surface_curr .- phi_surface_old .- Dt^2*GRAV./bath_disc.*phi_dσ
 
     return phi_surface_new
 end
@@ -50,7 +50,7 @@ function compute_eta(phi_new::Vector{Float64}, phi_curr::Vector{Float64}, phi_ol
     phi_surface_new = phi_nodes_new[1:nχ+1]
     μ_D_disc = domain.μ_D.(trans.x.(χs))
 
-    eta_new = -1/g*((3/2*phi_surface_new .- 2*phi_surface_curr .+ 1/2*phi_surface_old)/Dt .+ μ_D_disc.*phi_surface_new)
+    eta_new = -1/GRAV*((3/2*phi_surface_new .- 2*phi_surface_curr .+ 1/2*phi_surface_old)/Dt .+ μ_D_disc.*phi_surface_new)
 
     return eta_new
 end
@@ -63,7 +63,7 @@ function compute_eta(phi_new::Vector{Float64}, phi_curr::Vector{Float64}, phi_ol
     phi_surface_curr = phi_nodes_curr[1:nχ+1]
     phi_surface_new = phi_nodes_new[1:nχ+1]
 
-    eta_new = -1/g*((3/2*phi_surface_new .- 2*phi_surface_curr .+ 1/2*phi_surface_old)/Dt)
+    eta_new = -1/GRAV*((3/2*phi_surface_new .- 2*phi_surface_curr .+ 1/2*phi_surface_old)/Dt)
 
     return eta_new
 end

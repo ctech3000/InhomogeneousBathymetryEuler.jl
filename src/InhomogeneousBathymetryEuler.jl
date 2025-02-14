@@ -10,7 +10,7 @@ export AbstractWave, SimpleWave, Bathymetry, eval_bath, AbstractDomain, DomainPr
 export compute_σ_derivative_on_free_surface, compute_new_dirichlet_data, compute_eta, solve_all_timesteps, solve_one_timestep
 export σTransform, compute_B_D
 export computeDerivativeOnBoundary, laplace
-export g
+export GRAV
 export TrueSolution, assemble_f_global, assemble_g_global, coefficientVector, assemble_h_global
 
 

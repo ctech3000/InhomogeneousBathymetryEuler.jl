@@ -36,13 +36,13 @@ f_0(x,z) = 0.0*x*z
 
 u = TrueSolution(u_0,u_0_dx,u_0_dz,f_0)
 f = assemble_f_global(cellvalues, dh, B_domain, B_tilde_domain, D_domain, trans, u)
-gg = assemble_g_global(facetvalues, dh, D_inflow_boundary, trans, u)
+g = assemble_g_global(facetvalues, dh, D_inflow_boundary, trans, u)
 u_0_coefficients = coefficientVector(dh,u.u_0,trans)
 u_0_dz_coefficients = coefficientVector(dh,u.u_0_dz,trans)
 u_0_nodes = evaluate_at_grid_nodes(dh,u_0_coefficients,:phi) 
 h = M_T0*u_0_dz_coefficients
 
-RHS = f + gg + h
+RHS = f + g + h
 u_num_vec = K\RHS
 u_num_nodes = evaluate_at_grid_nodes(dh,u_num_vec,:phi)
 
