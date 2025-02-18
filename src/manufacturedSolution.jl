@@ -28,8 +28,9 @@ function assemble_f_element!(fe::Vector, cellvalues::CellValues, cell::CellCache
 
     for q_point in 1:n_q_points
         dΩ = getdetJdV(cellvalues, q_point)
-        D_point = De[q_point]
         q_point_coords = spatial_coordinate(cellvalues, q_point, node_coords)
+        D_point = De[q_point]
+        #D_point = abs(eval_bath(trans.tBath,q_point_coords[1])*trans.tBath.vals[end])
         x = trans.x(q_point_coords[1])
         z = trans.z(q_point_coords...)
         f0_point = u.f_0.(x, z)

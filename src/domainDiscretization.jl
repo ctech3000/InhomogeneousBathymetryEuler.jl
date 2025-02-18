@@ -25,7 +25,15 @@ function get_boundary_coordinates(grid::Ferrite.AbstractGrid, boundary_name::Str
 
         coordinates[2*(idx-1)+1:2*(idx-1)+2] = cell_boundary_coordinates
     end
-    return sort(unique(coordinates))
+    unique!(coordinates)
+    if boundary_name == "left" || boundary_name == "right"
+        sort!(coordinates, by = x -> x[2])
+    elseif boundary_name == "top" || boundary_name == "bottom"
+        sort!(coordinates, by = x -> x[1])
+    else
+        print("Error in get_boundary_coordinates: Invalid boundary_name!")
+    end
+    return coordinates
 end
 
 function discretizeTransformedDomain(domain::AbstractDomain, trans::σTransform; nχ::Int=-1, nσ::Int=-1)

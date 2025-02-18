@@ -33,7 +33,8 @@ function assemble_K_element!(Ke::Matrix, cell::CellCache, cellvalues::CellValues
         dΩ = getdetJdV(cellvalues, q_point)
         b = eval_bath(trans.tBath,χ,0)
         d_χ_b = eval_bath(trans.tBath,χ,1)
-         D = abs(b_L*b)
+        D = abs(b_L*b)
+        #@show χ, σ, b, d_χ_b, D
         #= B_point = Be[q_point]
         B_tilde_point = B_tilde_e[q_point]
         D_point = De[q_point] =#
@@ -190,11 +191,13 @@ function init_K_M(cellvalues::CellValues, facetvalues::FacetValues, dh::DofHandl
         dbc = dirichlet_from_discretized_data(dh.grid, :phi, "left", zeros(Float64, nσ+1)) # "left", because in transformed domain coordinates are flipped
         add!(ch, dbc);
         close!(ch)
-        apply!(LHS_matrix,f,ch)
+        apply!(LHS_matrix,deepcopy(f),ch)
+        apply!(K,deepcopy(f),ch)
     elseif outflow.type == "Neumann"
         ch = ConstraintHandler(dh)
         close!(ch)
-        apply!(LHS_matrix,f,ch)
+        apply!(LHS_matrix,deepcopy(f),ch)
+        apply!(K,deepcopy(f),ch)
     end
     return K, M_T0, M_T1, M_T2, LHS_matrix, LHS_matrix_init, ch
 end

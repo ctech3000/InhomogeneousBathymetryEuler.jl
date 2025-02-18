@@ -1,8 +1,17 @@
-#= b(x) = eval_bath(bath,x)
-b_prime(x) = eval_bath(bath,x,1)
-b_pprime(x) = eval_bath(bath,x,2)
-u_0(x,z) = cos(x-domain.x_R)*cosh(z-b(x))
-u_0_dx(x,z) = -sin(x-domain.x_R)*cosh(z-b(x)) - cos(x-domain.x_R)*sinh(z-b(x))*b_prime(x)
-u_0_dz(x,z) = cos(x-domain.x_R)*sinh(z-b(x))
-f_0(x,z) = -cos(x-domain.x_R)*cosh(z-b(x)) + sin(x-domain.x_R)*sinh(z-b(x))*b_prime(x) + sin(x-domain.x_R)*sinh(z-b(x))*b_prime(x) - cos(x-domain.x_R)*sinh(z-b(x))*b_pprime(x) + cos(x-domain.x_R)*cosh(z-b(x))*b_prime(x)^2 + cos(x-domain.x_R)*sinh(z-b(x))
- =#
+using InhomogeneousBathymetryEuler 
+using Ferrite
+
+
+x_L = 0.0
+x_D = 10.0
+x_R = 15.0
+timeMethod = BackwardDiff()
+outflow = OutflowBC("Dirichlet")
+bathPoints = collect(LinRange(x_L,x_R,801))
+#bathVals = -1.0*ones(Float64,801)
+bathVals = bathPoints*2.5 .- x_R*2.5
+bath = Bathymetry(bathPoints,bathVals)
+wave = SimpleWave()
+#domain = DomainProperties(0.0,5*8.5,bath,wave)
+domain = DampedDomainProperties(x_L,x_D,x_R,bath,wave)
+trans = σTransform(domain)
