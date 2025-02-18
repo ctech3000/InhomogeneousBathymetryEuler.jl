@@ -21,26 +21,35 @@ function dirichlet_from_discretized_data(grid::Ferrite.AbstractGrid, field::Symb
     return dbc
 end
 
-function assemble_K_element!(Ke::Matrix, cellvalues::CellValues, Be::Vector, B_tilde_e::Vector, De::Vector)
+function assemble_K_element!(Ke::Matrix, cell::CellCache, cellvalues::CellValues, Be::Vector, B_tilde_e::Vector, De::Vector, trans::σTransform)
+    b_L = trans.tBath.vals[end]
     n_basefuncs = getnbasefunctions(cellvalues)
     fill!(Ke, 0)
-    for q_point in 1:getnquadpoints(cellvalues)
+    n_q_points = getnquadpoints(cellvalues)
+    node_coords = getcoordinates(cell)
+    q_point_coords = spatial_coordinate.((cellvalues,), collect(1:n_q_points),(node_coords,))
+    for q_point in 1:n_q_points
+        χ, σ = q_point_coords[q_point]
         dΩ = getdetJdV(cellvalues, q_point)
-        B_point = Be[q_point]
+        b = eval_bath(trans.tBath,χ,0)
+        d_χ_b = eval_bath(trans.tBath,χ,1)
+         D = abs(b_L*b)
+        #= B_point = Be[q_point]
         B_tilde_point = B_tilde_e[q_point]
-        D_point = De[q_point]
+        D_point = De[q_point] =#
         for j in 1:n_basefuncs
             Nj_dχ, Nj_dσ  = shape_gradient(cellvalues, q_point, j)
             for i in 1:n_basefuncs
                 Ni_dχ, Ni_dσ = shape_gradient(cellvalues, q_point, i)
-                Ke[j, i] += (Ni_dχ*Nj_dχ - B_point*Ni_dχ*Nj_dσ - B_point*Ni_dσ*Nj_dχ  + B_tilde_point*Ni_dσ*Nj_dσ)*D_point*dΩ
+                #Ke[j, i] += (Ni_dχ*Nj_dχ - B_point*Ni_dχ*Nj_dσ - B_point*Ni_dσ*Nj_dχ  + B_tilde_point*Ni_dσ*Nj_dσ)*D_point*dΩ
+                Ke[i,j] += (1/b_L^2*Ni_dχ*Nj_dχ - (σ*d_χ_b)/(b_L^2*b)*(Ni_dσ*Nj_dχ+Ni_dχ*Nj_dσ) + (((σ*d_χ_b)/(b_L*b))^2+1/b^2)*Ni_dσ*Nj_dσ)*D*dΩ
             end
         end
     end
     return Ke
 end
 
-function assemble_K_global(cellvalues::CellValues, dh::DofHandler, domain::AbstractDomain, B_domain::Vector{Vector{Float64}}, B_tilde_domain::Vector{Vector{Float64}}, D_domain::Vector{Vector{Float64}})
+function assemble_K_global(cellvalues::CellValues, dh::DofHandler, domain::AbstractDomain, B_domain::Vector{Vector{Float64}}, B_tilde_domain::Vector{Vector{Float64}}, D_domain::Vector{Vector{Float64}}, trans::σTransform)
     K = allocate_matrix(dh)
     n_basefuncs = getnbasefunctions(cellvalues)
     Ke = zeros(n_basefuncs, n_basefuncs)
@@ -50,10 +59,10 @@ function assemble_K_global(cellvalues::CellValues, dh::DofHandler, domain::Abstr
         Be = B_domain[cellid(cell)]
         B_tilde_e = B_tilde_domain[cellid(cell)]
         De = D_domain[cellid(cell)]
-        assemble_K_element!(Ke, cellvalues, Be, B_tilde_e, De)
+        assemble_K_element!(Ke, cell, cellvalues, Be, B_tilde_e, De, trans)
         assemble!(assembler, celldofs(cell), Ke)
     end
-    K *= 1/domain.b_L^2
+    #K *= 1/domain.b_L^2
     return K
 end
 
@@ -152,7 +161,7 @@ function assemble_f_global(facetvalues::FacetValues, dh::DofHandler, D_inflow_bo
 end
 
 function init_K_f(cellvalues::CellValues, facetvalues::FacetValues, dh::DofHandler,domain::AbstractDomain,B_domain::Vector{Vector{Float64}}, B_tilde_domain::Vector{Vector{Float64}}, D_domain::Vector{Vector{Float64}}, D_inflow_boundary::Vector{Vector{Float64}}, trans::σTransform, χs::Vector{T}) where T<:Real
-    K = assemble_K_global(cellvalues,dh,domain,B_domain,B_tilde_domain,D_domain)
+    K = assemble_K_global(cellvalues,dh,domain,B_domain,B_tilde_domain,D_domain,trans)
     f = assemble_f_global(facetvalues,dh,D_inflow_boundary,trans,domain.wave,0.0)
     K_init = deepcopy(K)
 
@@ -168,7 +177,7 @@ end
 
 function init_K_M(cellvalues::CellValues, facetvalues::FacetValues, dh::DofHandler,domain::AbstractDomain,B_domain::Vector{Vector{Float64}}, B_tilde_domain::Vector{Vector{Float64}}, D_domain::Vector{Vector{Float64}}, D_inflow_boundary::Vector{Vector{Float64}}, D_surface_boundary::Vector{Vector{Float64}}, trans::σTransform, outflow::OutflowBC, timeMethod::AbstractTimeSteppingMethod, time_vec::Vector, nσ::Int)
     Dt = time_vec[2] - time_vec[1]
-    K = assemble_K_global(cellvalues,dh,domain,B_domain,B_tilde_domain,D_domain)
+    K = assemble_K_global(cellvalues,dh,domain,B_domain,B_tilde_domain,D_domain,trans)
     f = assemble_f_global(facetvalues,dh,D_inflow_boundary,trans,domain.wave,0.0)
     M_T0, M_T1, M_T2 = assemble_Ms_global(facetvalues,dh,D_surface_boundary,domain,trans)
 
