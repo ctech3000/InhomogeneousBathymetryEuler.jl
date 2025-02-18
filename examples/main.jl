@@ -1,11 +1,15 @@
 using InhomogeneousBathymetryEuler 
 using Ferrite
 
+
+x_L = 0.0
+x_D = 10.0
 timeMethod = BackwardDiff()
-outflow = OutflowBC("Neumann")
+outflow = OutflowBC("Dirichlet")
 bathPoints = collect(LinRange(0,5*8.5,801))
-bathVals = -1.0*ones(Float64,801)
+#bathVals = -1.0*ones(Float64,801)
 bath = Bathymetry(bathPoints,bathVals)
+bath = Bathymetry(bathPoints)
 wave = SimpleWave()
 #domain = DomainProperties(0.0,5*8.5,bath,wave)
 domain = DampedDomainProperties(0.0,2.5*8.5,5*8.5,bath,wave)

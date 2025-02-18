@@ -4,6 +4,7 @@ authors = ["christoph-zetek"]
 version = "1.0.0-DEV"
 
 [deps]
+BSplineKit = "093aae92-e908-43d7-9660-e50ee39d5a0a"
 Ferrite = "c061ca5d-56c9-439f-9c0e-210fe06d3992"
 GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
 Interpolations = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
@@ -12,6 +13,7 @@ ProgressBars = "49802e3a-d2f1-5c88-81d8-b72133a6f568"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [compat]
+BSplineKit = "0.18.2"
 Ferrite = "1.0.0"
 GLMakie = "0.11.2"
 Interpolations = "0.15.1"

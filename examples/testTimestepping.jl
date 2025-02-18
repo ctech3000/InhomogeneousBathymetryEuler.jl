@@ -64,7 +64,7 @@ f1
 # laplace is fulfilled everywhere except at corner outflow/surface
 
 # plot solution
-#= f2 = Figure()
+f2 = Figure()
 ax2 = Axis3(f2[1, 1], xlabel = "χ", ylabel = "σ", zlabel = "ϕ")
 surface!(ax2,χs,σs,phi_mat)
-f2 =#
+f2

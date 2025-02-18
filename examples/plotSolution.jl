@@ -5,6 +5,12 @@ ax = Axis3(f[1, 1], xlabel = "χ", ylabel = "σ", zlabel="ϕ")
 surface!(ax,χs,σs,all_phis[200])
 f
 
+lap = InhomogeneousBathymetryEuler.laplace(all_phis[2], Dχ, Dσ, domain)
+f1 = Figure()
+ax1 = Axis3(f1[1, 1], xlabel = "χ", ylabel = "σ", zlabel = "Δϕ",title="Laplace in domain")
+surface!(ax1,χs[2:end-1],σs[2:end-1],lap)
+f1
+
 f2 = Figure()
 ax2 = Axis(f2[1, 1], xlabel="t", ylabel="η",title="η at inflow over time")
 eta_time = [all_etas[t_ind][end] for t_ind=1:length(time_vec)]
