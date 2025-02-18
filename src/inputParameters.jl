@@ -46,7 +46,10 @@ function Bathymetry(points::Vector{Float64},vals::Vector{Float64})
 end
 
 function Bathymetry(points::Vector{Float64})
-    vals = 1/5*exp.(-(points.-5).^2).-1/3
+    interp_points = (2.5-0.5875) .+ [0.0, 0.0875, 0.1875, 0.2875, 0.3875, 0.4875, 0.5875, 0.6875, 0.7875, 0.8875, 0.9875, 1.0875, 1.175]
+    interp_vals = -0.3 .+ [0.0, 0.024, 0.053, 0.0905, 0.133, 0.182, 0.2, 0.182, 0.133, 0.0905, 0.053, 0.024, 0.0]
+    bath_interp = BSplineKit.extrapolate(BSplineKit.interpolate(interp_points,interp_vals,BSplineOrder(4)),BSplineKit.Flat())
+    vals = bath_interp.(points)
     return Bathymetry(points,vals)
 end
 
@@ -57,7 +60,6 @@ function eval_bath(bath::Bathymetry, x::Real, der::Int=0)
     elseif der == 1
         interp = linear_interpolation(bath.points, bath.derivative)
     elseif der == 2
-        print("here\n")
         second_der = firstDerivative(bath.derivative,bath.points[2]-bath.points[1])
         interp = linear_interpolation(bath.points,second_der)
     end
@@ -65,7 +67,6 @@ function eval_bath(bath::Bathymetry, x::Real, der::Int=0)
 end
 
 function eval_bath(bath::Bathymetry, x::Vector{T}, der::Int=0) where T<:Real
-    print("here\n")
     return eval_bath.((bath,),x,(der,))
 end
 
