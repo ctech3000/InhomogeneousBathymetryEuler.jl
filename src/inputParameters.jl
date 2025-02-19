@@ -38,15 +38,30 @@ struct Bathymetry
     points::Vector{Float64}
     vals::Vector{Float64}
     derivative::Vector{Float64}
+    vals_func::Interpolations.Extrapolation
+    derivative_func::Interpolations.Extrapolation
+    second_derivative_func::Interpolations.Extrapolation
 end
 
-function Bathymetry(points::Vector{Float64},vals::Vector{Float64})
+function Bathymetry(points::Vector{T1},vals::Vector{T2}) where T1 <:Real where T2 <:Real
+    vals_func = linear_interpolation(points, vals, extrapolation_bc=Interpolations.Flat())
     derivative = firstDerivative(vals,points[2]-points[1])
-    return Bathymetry(points,vals,derivative)
+    derivative_func = linear_interpolation(points, derivative, extrapolation_bc=Interpolations.Flat())
+    second_derivative = firstDerivative(derivative,points[2]-points[1])
+    second_derivative_func = linear_interpolation(points, second_derivative, extrapolation_bc=Interpolations.Flat())
+    return Bathymetry(points,vals,derivative,vals_func,derivative_func,second_derivative_func)
 end
 
-function Bathymetry(points::Vector{Float64})
-    interp_points = (2.5-0.5875) .+ [0.0, 0.0875, 0.1875, 0.2875, 0.3875, 0.4875, 0.5875, 0.6875, 0.7875, 0.8875, 0.9875, 1.0875, 1.175]
+function Bathymetry(points::Vector{T}, type::String; kargs...) where T<:Real
+    if type == "Gauss"
+        return Bathymetry(points; kargs...)
+    else
+        print("Error in Bathymetry: type not valid!")
+    end
+end
+
+function Bathymetry(points::Vector{T}; shift::Real=2.5) where T<:Real
+    interp_points = (shift-0.5875) .+ [0.0, 0.0875, 0.1875, 0.2875, 0.3875, 0.4875, 0.5875, 0.6875, 0.7875, 0.8875, 0.9875, 1.0875, 1.175]
     interp_vals = -0.3 .+ [0.0, 0.024, 0.053, 0.0905, 0.133, 0.182, 0.2, 0.182, 0.133, 0.0905, 0.053, 0.024, 0.0]
     bath_interp = BSplineKit.extrapolate(BSplineKit.interpolate(interp_points,interp_vals,BSplineOrder(4)),BSplineKit.Flat())
     vals = bath_interp.(points)
@@ -54,16 +69,14 @@ function Bathymetry(points::Vector{Float64})
 end
 
 function eval_bath(bath::Bathymetry, x::Real, der::Int=0)
-    x=clamp(x,minimum(bath.points),maximum(bath.points))
+    #x=clamp(x,minimum(bath.points),maximum(bath.points))
     if der == 0
-        interp = linear_interpolation(bath.points, bath.vals)
+        return bath.vals_func(x)
     elseif der == 1
-        interp = linear_interpolation(bath.points, bath.derivative)
+        return bath.derivative_func(x)
     elseif der == 2
-        second_der = firstDerivative(bath.derivative,bath.points[2]-bath.points[1])
-        interp = linear_interpolation(bath.points,second_der)
+        return bath.second_derivative_func(x)
     end
-    return interp(x)
 end
 
 function eval_bath(bath::Bathymetry, x::Vector{T}, der::Int=0) where T<:Real
@@ -80,20 +93,20 @@ struct DomainProperties <: AbstractDomain
     wave::AbstractWave
 end
 
-function DomainProperties(x_L::Float64, x_R::Float64, bath::Bathymetry, wave::AbstractWave)
+function DomainProperties(x_L::Real, x_R::Real, bath::Bathymetry, wave::AbstractWave)
     b_L = eval_bath(bath,x_L)
     return DomainProperties(x_L,x_R,bath,b_L,wave)
 end
 
 # Standarddomain
-function DomainProperties(bathymetryPoints::Vector{Float64}, wave::AbstractWave) 
+function DomainProperties(bathymetryPoints::Vector{T}, wave::AbstractWave) where T<:Real
     bath = Bathymetry(bathymetryPoints)
     x_L = 0.0
     x_R = 20.0
     return DomainProperties(x_L,x_R,bath,wave)
 end
 
-function DomainProperties(bathymetryPoints::Vector{Float64})
+function DomainProperties(bathymetryPoints::Vector{T}) where T<:Real
     wave = SimpleWave()
     return DomainProperties(bathymetryPoints,wave)
 end
@@ -119,14 +132,14 @@ function DampedDomainProperties(x_L::Float64, x_D::Float64, x_R::Float64, bath::
 end
 
 function DampedDomainProperties(wave::AbstractWave, bathymetryPoints::Vector{Float64})
-    bath = Bathymetry(bathymetryPoints::Vector{Float64})
+    bath = Bathymetry(bathymetryPoints)
     x_L = 0.0
     x_D = 12.0
     x_R = 20.0
     return DampedDomainProperties(x_L,x_D,x_R,bath,wave)
 end
 
-function DampedDomainProperties(bathymetryPoints::Vector{Float64}) 
+function DampedDomainProperties(bathymetryPoints::Vector{T}) where T<:Real
     wave = SimpleWave()
     return DampedDomainProperties(wave,bathymetryPoints)
 end

@@ -62,5 +62,5 @@ function discretizeTransformedDomain(domain::AbstractDomain, trans::σTransform;
     Dχ = χs[2] - χs[1]
     Dσ = σs[2] - σs[1]
 
-    return grid, χs, σs, Dχ, Dσ
+    return grid, χs, σs, Dχ, Dσ, nχ, nσ
 end

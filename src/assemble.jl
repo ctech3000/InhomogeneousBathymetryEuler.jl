@@ -28,6 +28,7 @@ function assemble_K_element!(Ke::Matrix, cell::CellCache, cellvalues::CellValues
     n_q_points = getnquadpoints(cellvalues)
     node_coords = getcoordinates(cell)
     q_point_coords = spatial_coordinate.((cellvalues,), collect(1:n_q_points),(node_coords,))
+
     for q_point in 1:n_q_points
         χ, σ = q_point_coords[q_point]
         dΩ = getdetJdV(cellvalues, q_point)

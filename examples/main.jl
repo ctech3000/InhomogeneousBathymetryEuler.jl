@@ -4,20 +4,23 @@ using Ferrite
 
 x_L = 0.0
 x_D = 10.0
+x_R = 20.0
+time_vec = collect(0:0.05:20)
+nχ = 800
+nσ = 12
+
 timeMethod = BackwardDiff()
 outflow = OutflowBC("Dirichlet")
-bathPoints = collect(LinRange(0,5*8.5,801))
-#bathVals = -1.0*ones(Float64,801)
+bathPoints = collect(LinRange(x_L,x_R,nχ+1))
+#bathVals = -0.3*ones(Float64,nχ+1)
 #bath = Bathymetry(bathPoints,bathVals)
-bath = Bathymetry(bathPoints)
-wave = SimpleWave()
-#domain = DomainProperties(0.0,5*8.5,bath,wave)
-domain = DampedDomainProperties(0.0,2.5*8.5,5*8.5,bath,wave)
+#bath = Bathymetry(bathPoints,"Gauss",shift=9)
+wave = SimpleWave()     #λ=4.78
+#domain = DomainProperties(x_L,x_R,bath,wave)
+domain = DampedDomainProperties(x_L,x_D,x_R,bath,wave)
 trans = σTransform(domain)
-nχ = 800
-nσ = 32
-grid, χs, σs, Dχ, Dσ = discretizeTransformedDomain(domain, trans, nχ=nχ, nσ=nσ)
-time_vec = collect(0:0.05:30)
+grid, χs, σs, Dχ, Dσ, nχ, nσ = discretizeTransformedDomain(domain, trans, nχ=nχ)
+Dt = (time_vec[end] - time_vec[1])/(length(time_vec)-1)
 
 #setup dofs
 ip = Lagrange{RefQuadrilateral, 1}()
