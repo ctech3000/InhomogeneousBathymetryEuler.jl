@@ -74,9 +74,9 @@ function solve_all_timesteps(LHS_matrix::SparseMatrixCSC, LHS_matrix_init::Spars
     Dσ = σs[2] - σs[1]
     nt = length(time_vec)
     Dt = time_vec[2] - time_vec[1]
-    phi_old = zeros(Float64, ((nχ+1)*(nσ+1)))       # initial values
-    phi_oldold = zeros(Float64, ((nχ+1)*(nσ+1)))    
-    phi_curr = zeros(Float64, ((nχ+1)*(nσ+1)))  
+    phi_old = zeros(Float64, ndofs(dh))       # initial values
+    phi_oldold = zeros(Float64, ndofs(dh))    
+    phi_curr = zeros(Float64, ndofs(dh))  
     all_etas = Vector{Vector{Float64}}(undef,nt)
     all_etas[1] = zeros(Float64,nχ+1)
     if save_phi
