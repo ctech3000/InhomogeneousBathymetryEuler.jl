@@ -12,3 +12,15 @@ function showIfBigDif(val1::Real,val2::Real,tol::Real)
         @show val1, val2
     end
 end
+
+function dofToCoordinate(dh::Ferrite.DofHandler,i::Integer)
+    c = 0
+    ind = 0
+    for cell in CellIterator(dh)
+        if i in celldofs(cell)
+            c = cellid(cell)
+            ind = findall(x->x==i,celldofs(cell))
+            return getcoordinates(cell)[ind][1]
+        end
+    end
+end

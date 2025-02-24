@@ -39,6 +39,12 @@ function assemble_K_element!(Ke::Matrix, cell::CellCache, cellvalues::CellValues
         #= B_point = Be[q_point]
         B_tilde_point = B_tilde_e[q_point]
         D_point = De[q_point] =#
+        B_point = Be[q_point]
+        B_tilde_point = B_tilde_e[q_point]
+        D_point = De[q_point]
+#=         showIfBigDif(B_point, σ*d_χ_b/b, 0.01)
+        showIfBigDif(B_tilde_point, (σ*d_χ_b/b)^2+b_L^2/b^2, 0.001)
+        showIfBigDif(D_point, D, 0.01) =#
         for j in 1:n_basefuncs
             Nj_dχ, Nj_dσ  = shape_gradient(cellvalues, q_point, j)
             for i in 1:n_basefuncs
@@ -180,6 +186,7 @@ end
 function init_K_M(cellvalues::CellValues, facetvalues::FacetValues, dh::DofHandler,domain::AbstractDomain,B_domain::Vector{Vector{Float64}}, B_tilde_domain::Vector{Vector{Float64}}, D_domain::Vector{Vector{Float64}}, D_inflow_boundary::Vector{Vector{Float64}}, D_surface_boundary::Vector{Vector{Float64}}, trans::σTransform, outflow::OutflowBC, timeMethod::AbstractTimeSteppingMethod, time_vec::Vector, nσ::Int)
     Dt = time_vec[2] - time_vec[1]
     K = assemble_K_global(cellvalues,dh,domain,B_domain,B_tilde_domain,D_domain,trans)
+    K_init = deepcopy(K)
     f = assemble_f_global(facetvalues,dh,D_inflow_boundary,trans,domain.wave,0.0)
     M_T0, M_T1, M_T2 = assemble_Ms_global(facetvalues,dh,D_surface_boundary,domain,trans)
 
@@ -200,7 +207,7 @@ function init_K_M(cellvalues::CellValues, facetvalues::FacetValues, dh::DofHandl
         apply!(LHS_matrix,deepcopy(f),ch)
         apply!(K,deepcopy(f),ch)
     end
-    return K, M_T0, M_T1, M_T2, LHS_matrix, LHS_matrix_init, ch
+    return K, K_init, M_T0, M_T1, M_T2, LHS_matrix, LHS_matrix_init, ch
 end
 
 #= function to apply Dirichlet data on prescribed dofs. 
