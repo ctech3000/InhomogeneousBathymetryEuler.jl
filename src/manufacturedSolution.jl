@@ -34,7 +34,6 @@ function assemble_f_element!(fe::Vector, cellvalues::CellValues, cell::CellCache
         x = trans.x(q_point_coords[1])
         z = trans.z(q_point_coords...)
         χ = q_point_coords[1]
-        @show χ, D_point - abs(-1/2*χ-1)
         f0_point = u.f_0.(x, z)
         for i in 1:n_basefuncs
             Ni = shape_value(cellvalues, q_point, i)
@@ -115,26 +114,58 @@ function assemble_h_element!(he::Vector, facetvalues::FacetValues, facet::FacetC
     end
 end
 
-function coefficientVector(dh::Ferrite.DofHandler, func::Function, trans::σTransform)
-    #= coeff = zeros(Float64, ndofs(dh))
-    for (i, node) in enumerate(dh.grid.nodes)
-        χ, σ = get_node_coordinate(node)
-        x = trans.x(χ)
-        z = trans.z(χ, σ)
-        coeff[i] = func(x, z)
-    end
-    return coeff =#
+# https://github.com/Ferrite-FEM/Ferrite.jl/discussions/788
+function vertexdofs(dh::DofHandler, vertexid::VertexIndex)
 
+    cellid, lvidx = vertexid
+    nfields = length(dh.field_names)
+    sdh = dh.subdofhandlers[dh.cell_to_subdofhandler[cellid]]
+    local_vertex_dofs = Int[]
+    for ifield in 1:length(sdh.field_names)
+        offset = Ferrite.field_offset(sdh, ifield)
+        field_dim = Ferrite.n_components(sdh, ifield)
+        _field_ip = sdh.field_interpolations[ifield]
+        if _field_ip isa Ferrite.VectorizedInterpolation
+            field_ip = _field_ip.ip
+        else
+            field_ip = _field_ip
+        end
+        vert = Ferrite.vertexdof_indices(field_ip)[lvidx]
+        
+        for vdof in vert, d in 1:field_dim 
+            push!(local_vertex_dofs, (vdof-1)*field_dim + d + offset)
+        end
+    end
+
+    dofs = zeros(Int, ndofs_per_cell(dh, cellid))
+    celldofs!(dofs, dh, cellid)
+
+    return dofs[local_vertex_dofs]
+end
+
+function nodeid_to_vertexindex(grid::Grid, nodeid::Int)
+    for (cellid, cell) in enumerate(grid.cells)
+        for (i, nodeid2) in enumerate(cell.nodes)
+            if nodeid == nodeid2
+                return VertexIndex(cellid,i)
+            end    
+        end
+    end
+    error("Node $(nodeid) does not belong to any cell")
+end
+
+
+function coefficientVector(dh::Ferrite.DofHandler, func::Function, trans::σTransform)
+    node_ids = 1:length(dh.grid.nodes)
     coeff = zeros(Float64, ndofs(dh))
 
-    for cell in CellIterator(dh)
-        dofs = celldofs(cell)
-        node_coords = getcoordinates(cell)
-        for (i,dof) in enumerate(dofs)
-            x = trans.x(node_coords[i][1])
-            z = trans.z(node_coords[i]...)
-            coeff[dof] = func(x, z)
-        end
+    for node_id in node_ids
+        vertexid = nodeid_to_vertexindex(dh.grid, node_id)
+        dof = vertexdofs(dh, vertexid)[1]
+        dof_coord = dh.grid.nodes[node_id].x
+        x = trans.x(dof_coord[1])
+        z = trans.z(dof_coord...)
+        coeff[dof] = func(x, z)
     end
     return coeff
 end

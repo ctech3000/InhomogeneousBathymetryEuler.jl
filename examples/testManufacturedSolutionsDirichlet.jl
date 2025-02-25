@@ -1,16 +1,16 @@
 using InhomogeneousBathymetryEuler, Ferrite, GLMakie, SparseArrays, LinearAlgebra, Tensors
 
 x_L = 0.0
-x_R = 1
-nχ = 3
-nσ = 3
+x_R = 3
+nχ = 50
+nσ = 50
 timeMethod = BackwardDiff()
 outflow = OutflowBC("Dirichlet")
 bathPoints = collect(LinRange(x_L,x_R,nχ+1))
-#bath = Bathymetry(bathPoints,-1*ones(Float64,nχ+1))
+bath = Bathymetry(bathPoints,-3*ones(Float64,nχ+1))
 #bath = Bathymetry(bathPoints,"Gauss",shift=0.5,bHeight=0.3,depth=-1.0)
-bath = Bathymetry(bathPoints,"Ramp",rampStart=0.0,rampEnd=1.0,rampHeightStart=-1.0,rampHeightEnd=-0.5)
-#bath = Bathymetry(bathPoints,"TrueGauss",shift=0.5,bHeight=0.3, depth=-1.0)
+#bath = Bathymetry(bathPoints,"Ramp",rampStart=0.0,rampEnd=3.0,rampHeightStart=-2.0,rampHeightEnd=-3)
+#bath = Bathymetry(bathPoints,"TrueGauss",shift=1.5,bHeight=1, depth=-3.0)
 
 wave = SimpleWave()
 domain = DomainProperties(x_L,x_R,bath,wave)
@@ -91,5 +91,36 @@ u_num_vec = K_init\RHS
 u_num_nodes = evaluate_at_grid_nodes(dh,u_num_vec,:phi)
 u_num_nodes_mat = reshape(u_num_nodes,(nχ+1,nσ+1));
 
-lap_num = InhomogeneousBathymetryEuler.laplace(u_num_nodes_mat, Dχ, Dσ, domain)
-lap_0 = InhomogeneousBathymetryEuler.laplace(u_0_nodes_mat, Dχ, Dσ, domain);
+xs = zeros(length(σs))
+zs = trans.z(zeros(length(σs)),σs)
+u_num_dx_L, _ = computeDerivativeOnBoundary(u_num_nodes_mat,Dχ,Dσ,zeros(length(σs)),σs,domain,trans,"right","physical")
+f1 = Figure()
+ax1 = Axis(f1[1,1])
+lines!(ax1,zs,-u_num_dx_L)
+lines!(ax1,zs,-u_0_dx.(xs,zs))
+
+f2 = Figure()
+ax2 = Axis(f2[1,1])
+xs = trans.x(χs)
+zs = zeros(length(xs))
+_, u_num_dz_T = computeDerivativeOnBoundary(u_num_nodes_mat,Dχ,Dσ,χs,zeros(length(χs)),domain,trans,"bottom","physical")
+lines!(ax2,xs,u_num_dz_T)
+lines!(ax2,xs,u_0_dz.(xs,zs))
+
+f3 = Figure()
+ax3 = Axis(f3[1,1])
+xs = trans.x(χs)
+zs = eval_bath(bath,xs)
+_, u_num_dz_B = computeDerivativeOnBoundary(u_num_nodes_mat,Dχ,Dσ,χs,ones(length(χs)),domain,trans,"top","physical")
+lines!(ax3,xs,u_num_dz_B)
+lines!(ax3,xs,u_0_dz.(xs,zs))
+
+rhs_num = InhomogeneousBathymetryEuler.laplace(u_num_nodes_mat, Dχ, Dσ, trans, χs, σs) - f_0_mat[2:end-1,2:end-1]
+rhs_0 = InhomogeneousBathymetryEuler.laplace(u_0_nodes_mat, Dχ, Dσ, trans, χs, σs) - f_0_mat[2:end-1,2:end-1]
+f4 = Figure()
+ax4 = Axis3(f4[1,1],xlabel="χ",ylabel="σ")
+surface!(ax4,χs,σs,rhs_num)
+
+f5 = Figure()
+ax5 = Axis3(f5[1,1],xlabel="χ",ylabel="σ")
+surface!(ax5,χs,σs,rhs_0)

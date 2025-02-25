@@ -47,7 +47,7 @@ function Bathymetry(points::Vector{T1},vals::Vector{T2}) where T1 <:Real where T
     vals_func = linear_interpolation(points, vals, extrapolation_bc=Interpolations.Flat())
     derivative = firstDerivative(vals,points[2]-points[1])
     derivative_func = linear_interpolation(points, derivative, extrapolation_bc=Interpolations.Flat())
-    second_derivative = firstDerivative(derivative,points[2]-points[1])
+    second_derivative = secondDerivative(vals,points[2]-points[1])
     second_derivative_func = linear_interpolation(points, second_derivative, extrapolation_bc=Interpolations.Flat())
     return Bathymetry(points,vals,derivative,vals_func,derivative_func,second_derivative_func)
 end
