@@ -52,17 +52,33 @@ function Bathymetry(points::Vector{T1},vals::Vector{T2}) where T1 <:Real where T
     return Bathymetry(points,vals,derivative,vals_func,derivative_func,second_derivative_func)
 end
 
-function Bathymetry(points::Vector{T}, type::String; kargs...) where T<:Real
+function Bathymetry(points::Vector{T}, type::String; kwargs...) where T<:Real
     if type == "Gauss"
-        return Bathymetry(points; kargs...)
+        return GaussBathymetry(points; kwargs...)
+    elseif type == "Ramp"
+        return RampBathymetry(points; kwargs...)
+    elseif type == "TrueGauss"
+        return TrueGaussBathymetry(points;kwargs...)
     else
         print("Error in Bathymetry: type not valid!")
     end
 end
 
-function Bathymetry(points::Vector{T}; shift::Real=2.5) where T<:Real
+function TrueGaussBathymetry(points::Vector{T}; shift::Real=2.5, depth::Real=-0.3, bHeight::Real=0.2,sigma::Real=-0.2) where T<:Real
+    vals = bHeight*exp.(-1/2*((points.-shift)/sigma).^2) .+ depth
+    return Bathymetry(points,vals)
+end
+
+function RampBathymetry(points::Vector{T};rampStart::Real=1.0, rampEnd::Real=9.0, rampHeightStart::Real=-0.3, rampHeightEnd::Real=-0.1) where T<:Real
+    bath_interp = linear_interpolation([rampStart,rampEnd],[rampHeightStart,rampHeightEnd],extrapolation_bc=Interpolations.Flat())
+    vals = bath_interp.(points)
+
+    return Bathymetry(points,vals)
+end
+
+function GaussBathymetry(points::Vector{T}; shift::Real=2.5, depth::Real=-0.3, bHeight::Real=0.2) where T<:Real
     interp_points = (shift-0.5875) .+ [0.0, 0.0875, 0.1875, 0.2875, 0.3875, 0.4875, 0.5875, 0.6875, 0.7875, 0.8875, 0.9875, 1.0875, 1.175]
-    interp_vals = -0.3 .+ [0.0, 0.024, 0.053, 0.0905, 0.133, 0.182, 0.2, 0.182, 0.133, 0.0905, 0.053, 0.024, 0.0]
+    interp_vals = depth .+ bHeight/0.2*[0.0, 0.024, 0.053, 0.0905, 0.133, 0.182, 0.2, 0.182, 0.133, 0.0905, 0.053, 0.024, 0.0]
     bath_interp = BSplineKit.extrapolate(BSplineKit.interpolate(interp_points,interp_vals,BSplineOrder(4)),BSplineKit.Flat())
     vals = bath_interp.(points)
     return Bathymetry(points,vals)

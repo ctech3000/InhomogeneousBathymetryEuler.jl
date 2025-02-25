@@ -31,10 +31,13 @@ function assemble_K_element!(Ke::Matrix, cell::CellCache, cellvalues::CellValues
 
     for q_point in 1:n_q_points
         χ, σ = q_point_coords[q_point]
+        #= fac1 = σ/(χ+2)
+        fac2 = σ^2/(χ+2)^2 + 1/(1/2*χ+1)^2 =#
         dΩ = getdetJdV(cellvalues, q_point)
         b = eval_bath(trans.tBath,χ,0)
         d_χ_b = eval_bath(trans.tBath,χ,1)
         D = abs(b_L*b)
+        #@show fac1 - (σ*d_χ_b)/(b_L^2*b), fac2 - (((σ*d_χ_b)/(b_L*b))^2+1/b^2)
         #@show χ, σ, b, d_χ_b, D
         #= B_point = Be[q_point]
         B_tilde_point = B_tilde_e[q_point]
@@ -45,6 +48,7 @@ function assemble_K_element!(Ke::Matrix, cell::CellCache, cellvalues::CellValues
 #=         showIfBigDif(B_point, σ*d_χ_b/b, 0.01)
         showIfBigDif(B_tilde_point, (σ*d_χ_b/b)^2+b_L^2/b^2, 0.001)
         showIfBigDif(D_point, D, 0.01) =#
+        #@show (σ*d_χ_b)/(b_L^2*b) (((σ*d_χ_b)/(b_L*b))^2+1/b^2)
         for j in 1:n_basefuncs
             Nj_dχ, Nj_dσ  = shape_gradient(cellvalues, q_point, j)
             for i in 1:n_basefuncs

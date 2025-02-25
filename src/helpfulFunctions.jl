@@ -24,3 +24,15 @@ function dofToCoordinate(dh::Ferrite.DofHandler,i::Integer)
         end
     end
 end
+
+function q_pointToDof(q_point::Int)
+    if q_point == 1
+        return 1
+    elseif q_point == 2
+        return 2
+    elseif q_point == 3
+        return 4
+    elseif q_point == 4
+        return 3
+    end
+end

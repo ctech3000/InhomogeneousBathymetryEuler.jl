@@ -1,17 +1,17 @@
-using InhomogeneousBathymetryEuler, Ferrite, GLMakie, SparseArrays, LinearAlgebra
+using InhomogeneousBathymetryEuler, Ferrite, GLMakie, SparseArrays, LinearAlgebra, Tensors
 
 x_L = 0.0
 x_R = 1
-nχ = 40
-nσ = 40
+nχ = 3
+nσ = 3
 timeMethod = BackwardDiff()
 outflow = OutflowBC("Dirichlet")
-#bathPoints = collect(LinRange(x_L,x_R,nχ+1))
-#bathVals = [-4,-3,-2,-3,-4]
-#bathVals = vcat(zeros(Float64, round(Integer,nχ/10)).-0.5,-1.5 .+ cos.(bathPoints[1:end-round(Integer,nχ/10)]))
-#bathVals = -1*ones(Float64,nχ+1)
-bath = Bathymetry(bathPoints,bathVals)
-bath = Bathymetry(bathPoints,"Gauss",shift=0.5)
+bathPoints = collect(LinRange(x_L,x_R,nχ+1))
+#bath = Bathymetry(bathPoints,-1*ones(Float64,nχ+1))
+#bath = Bathymetry(bathPoints,"Gauss",shift=0.5,bHeight=0.3,depth=-1.0)
+bath = Bathymetry(bathPoints,"Ramp",rampStart=0.0,rampEnd=1.0,rampHeightStart=-1.0,rampHeightEnd=-0.5)
+#bath = Bathymetry(bathPoints,"TrueGauss",shift=0.5,bHeight=0.3, depth=-1.0)
+
 wave = SimpleWave()
 domain = DomainProperties(x_L,x_R,bath,wave)
 #domain = DampedDomainProperties(0.0,2.5*8.5,5*8.5,bath,wave)
@@ -34,34 +34,39 @@ K, K_init, M_T0, M_T1, M_T2, LHS_matrix, LHS_matrix_init, ch = init_K_M(cellvalu
 
 
 print("K, M done\n")
-# flat bath, f=0
-#= u_0(x,z) = sin(x-domain.x_R)*cosh(z-domain.b_L)
-u_0_dx(x,z) = cos(x-domain.x_R)*cosh(z-domain.b_L)
-u_0_dz(x,z) = sin(x-domain.x_R)*sinh(z-domain.b_L)
-f_0(x,z) = 0.0*x*z
-f_0_mat = [f_0(trans.x(χ),trans.z(χ,σ)) for χ in χs, σ in σs] =#
-# flat bath, f != 0
-#= u_0(x,z) = sin(x-domain.x_R)*cosh(z-domain.b_L)*sinh(x-domain.x_R)
-u_0_dx(x,z) = cos(x-domain.x_R)*cosh(z-domain.b_L)*sinh(x-domain.x_R) + sin(x-domain.x_R)*cosh(z-domain.b_L)*cosh(x-domain.x_R)
-u_0_dz(x,z) = sin(x-domain.x_R)*sinh(z-domain.b_L)*sinh(x-domain.x_R)
-f_0(x,z) = 2*cos(x-domain.x_R)*cosh(z-domain.b_L)*cosh(x-domain.x_R) + sin(x-domain.x_R)*cosh(z-domain.b_L)*sinh(x-domain.x_R)
-f_0_mat = [f_0(trans.x(χ),trans.z(χ,σ)) for χ in χs, σ in σs] =#
+#= flat bath, f=0 =#
+#u_0(x,z) = sin(x-domain.x_R)*cosh(z-domain.b_L)
 
-# inhom bath, f != 0
+#= flat bath, f != 0 =#
+#u_0(x,z) = sin(x-domain.x_R)*cosh(z-domain.b_L)*sinh(x-domain.x_R)
+
+#= inhom bath, f != 0 =#
 b(x) = eval_bath(bath,x)
 b_prime(x) = eval_bath(bath,x,1)
 b_pprime(x) = eval_bath(bath,x,2)
 u_0(x,z) = sin(x-domain.x_R)*cosh(z-b(x))
-u_0_dx(x,z) = cos(x-domain.x_R)*cosh(z-b(x)) - sin(x-domain.x_R)*sinh(z-b(x))*b_prime(x)
-u_0_dz(x,z) = sin(x-domain.x_R)*sinh(z-b(x))
-f_0(x,z) = -sin(x-domain.x_R)*cosh(z-b(x)) - cos(x-domain.x_R)*sinh(z-b(x))*b_prime(x) - cos(x-domain.x_R)*sinh(z-b(x))*b_prime(x) - sin(x-domain.x_R)*sinh(z-b(x))*b_pprime(x) + sin(x-domain.x_R)*cosh(z-b(x))*((b_prime(x))^2) + sin(x-domain.x_R)*cosh(z-b(x))
+
+function u_0_dx_(x,z,u_0::Function)
+    X = Tensors.Tensor{1,2,Float64}((x,z))
+    return Tensors.gradient(x->u_0(x[1],x[2]),X)[1]
+end
+
+function u_0_dz_(x,z,u_0::Function)
+    X = Tensors.Tensor{1,2,Float64}((x,z))
+    return Tensors.gradient(x->u_0(x[1],x[2]),X)[2]
+end
+
+function f_0_(x,z,u_0::Function)
+    X = Tensors.Tensor{1,2,Float64}((x,z))
+    return Tensors.laplace(x->u_0(x[1],x[2]),X)
+end
+
+u_0_dx(x,z) = u_0_dx_(x,z,u_0)
+u_0_dz(x,z) = u_0_dz_(x,z,u_0)
+f_0(x,z) = f_0_(x,z,u_0)
+
 f_0_mat = [f_0(trans.x(χ),trans.z(χ,σ)) for χ in χs, σ in σs]
 
-#= u_0(x,z) = (x-x_R)^2*(z-b(x))^2
-u_0_dx(x,z) = 2*(x-x_R)*(z-b(x))^2 - 2*(x-x_R)^2*(z-b(x))*b_prime(x)
-u_0_dz(x,z) = 2*(x-x_R)^2*(z-b(x))
-f_0(x,z) = 2*(x-x_R)*(b(x)-z)*((x-x_R)*b_pprime(x)+2*b_prime(x)) + 2*(x-x_R)*b_prime(x)*((x-x_R)*b_prime(x)+b(x)-z) + 2*(b(x)-z)*((x-x_R)*b_prime(x)+b(x)-z) + 2*(x-x_R)^2
- =#
 u = TrueSolution(u_0,u_0_dx,u_0_dz,f_0)
 f = assemble_f_global(cellvalues, dh, B_domain, B_tilde_domain, D_domain, trans, u)
 g = assemble_g_global(facetvalues, dh, D_inflow_boundary, trans, u)
@@ -76,12 +81,13 @@ dbc = dirichlet_from_discretized_data(dh.grid, :phi, "left", zeros(Float64, nσ+
 add!(ch, dbc);
 close!(ch)
 RHS = -f + g + h
-apply_dirichlet!(RHS,K_init,zeros(Float64,nσ+1),ch)
+#apply_dirichlet!(RHS,K_init,zeros(Float64,nσ+1),ch)
+apply!(K_init,RHS,ch)
 print("assembly done\n")
 
 u_0_nodes_mat = reshape(u_0_nodes,(nχ+1,nσ+1))
 
-u_num_vec = K\RHS
+u_num_vec = K_init\RHS
 u_num_nodes = evaluate_at_grid_nodes(dh,u_num_vec,:phi)
 u_num_nodes_mat = reshape(u_num_nodes,(nχ+1,nσ+1));
 

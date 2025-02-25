@@ -33,6 +33,8 @@ function assemble_f_element!(fe::Vector, cellvalues::CellValues, cell::CellCache
         #D_point = abs(eval_bath(trans.tBath,q_point_coords[1])*trans.tBath.vals[end])
         x = trans.x(q_point_coords[1])
         z = trans.z(q_point_coords...)
+        χ = q_point_coords[1]
+        @show χ, D_point - abs(-1/2*χ-1)
         f0_point = u.f_0.(x, z)
         for i in 1:n_basefuncs
             Ni = shape_value(cellvalues, q_point, i)
