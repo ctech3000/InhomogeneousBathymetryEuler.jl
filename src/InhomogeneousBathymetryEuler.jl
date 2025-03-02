@@ -1,6 +1,6 @@
 module InhomogeneousBathymetryEuler
 
-using Interpolations, Ferrite, SparseArrays, ProgressBars, JLD, BSplineKit
+using Interpolations, Ferrite, SparseArrays, ProgressBars, JLD, BSplineKit, PlutoUI, DelimitedFiles, FFTW
 
 export computeWaveNumber, analyticPotential, analyticPotential_dx, analyticPotential_dz, transformedAnalyticPotential, transformedAnalyticPotential_dχ, transformedAnalyticPotential_dσ
 export dirichlet_from_discretized_data, assemble_K_element!, assemble_K_global, assemble_Ms_global, assemble_f_element!, insert_into_f!, assemble_f_global, init_K_f, apply_dirichlet!, meandiag, init_K_M
@@ -11,7 +11,7 @@ export compute_σ_derivative_on_free_surface, compute_new_dirichlet_data, comput
 export σTransform, compute_B_D
 export computeDerivativeOnBoundary, laplace
 export GRAV
-export TrueSolution, assemble_f_global, assemble_g_global, coefficientVector, assemble_h_global
+export TrueSolution, assemble_f_global, assemble_g_global, coefficientVector, assemble_h_global, assemble_manufactured_global, assemble_f_global_alt
 
 
 include("helpfulFunctions.jl")
