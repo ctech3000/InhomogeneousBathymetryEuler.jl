@@ -34,6 +34,31 @@ function SimpleWave(str::String)
     end
 end
 
+struct IrregWave <: AbstractWave
+    waveList::Vector{SimpleWave}
+    nComponents::Integer
+    dom_amp::Real
+    dom_freq::Real
+end
+
+function IrregWave(amps::Vector{T},freqs::Vector{T},phases::Vector{T},hasFadeIn::Bool=true) where T <: Real
+    nComponents = length(amps)
+    dom_ind = argmax(amps)
+    dom_freq = freqs[dom_ind]
+    dom_amp = amps[dom_ind]
+    
+    waveList = Vector{SimpleWave}(undef,nComponents)
+    for i = 1:nComponents
+        waveList[i] = SimpleWave(amps[i],freqs[i],phases[i],hasFadeIn=hasFadeIn)
+    end
+    return IrregWave(waveList,nComponents,dom_amp,dom_freq)
+end
+
+getFreq(wave::SimpleWave) = wave.freq
+getFreq(wave::IrregWave) = wave.dom_freq
+getAmp(wave::SimpleWave) = wave.amp
+getAmp(wave::IrregWave) = wave.dom_amp
+
 struct Bathymetry
     points::Vector{Float64}
     vals::Vector{Float64}
@@ -140,10 +165,11 @@ end
 function DampedDomainProperties(x_L::Float64, x_D::Float64, x_R::Float64, bath::Bathymetry, wave::AbstractWave)
     b_L = eval_bath(bath,x_L)
     L = x_R - x_D
-    λ = 2*pi/computeWaveNumber(wave.freq,b_L)
-    μ₀ = -GRAV*log(0.5*10^-5)/(2*wave.freq*L)*sqrt(λ/GRAV)
+    freq = getFreq(wave)
+    λ = 2*pi/computeWaveNumber(freq,b_L)
+    μ₀ = -GRAV*log(0.5*10^-5)/(2*freq*L)*sqrt(λ/GRAV)
     μ_D(x) = x<x_D ? 0.0 : μ₀*sqrt(GRAV/λ)*(-2*((x-x_D)/L)^3 + 3*((x-x_D)/L)^2)
-    #μ_D(x) = x<x_D ? 0.0 : Float64(wave.freq*((x-x_D)/(x_R-x_D))^2)
+    #μ_D(x) = x<x_D ? 0.0 : Float64(freq*((x-x_D)/(x_R-x_D))^2)
     return DampedDomainProperties(x_L,x_D,x_R,bath,b_L,wave,μ_D)
 end
 
