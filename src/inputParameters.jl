@@ -41,7 +41,7 @@ struct IrregWave <: AbstractWave
     dom_freq::Real
 end
 
-function IrregWave(amps::Vector{T},freqs::Vector{T},phases::Vector{T},hasFadeIn::Bool=true) where T <: Real
+function IrregWave(amps::Vector{T},freqs::Vector{T},phases::Vector{T};hasFadeIn::Bool=true) where T <: Real
     nComponents = length(amps)
     dom_ind = argmax(amps)
     dom_freq = freqs[dom_ind]

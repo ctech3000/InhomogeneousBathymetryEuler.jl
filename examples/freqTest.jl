@@ -96,7 +96,7 @@ Select end frequency.
 """
 
 # ╔═╡ cd663bf7-07ca-4bb5-aff9-8f832b8c7215
-@bind end_frequency PlutoUI.Slider(freqs,default = freqs[end], show_value = true)
+@bind end_frequency PlutoUI.Slider(freqs[1:round(Integer,length(freqs)/2)],default = freqs[end], show_value = true)
 
 # ╔═╡ 672f4203-9540-405b-8834-e381fdf207e4
 begin
@@ -133,8 +133,12 @@ end
 begin
 	wave_amps = real.(vcat(coeff[selected_freq_inds], coeff[end.-(selected_freq_inds.-1)]))
 	wave_freqs = 2*pi*vcat(freqs[selected_freq_inds],freqs[end.-(selected_freq_inds.-1)])
-	lines(wave_freqs,wave_amps)
+	phases = zeros(size(wave_amps))
+	wave = IrregWave(wave_amps,wave_freqs,phases,hasFadeIn=false)
 end
+
+# ╔═╡ c337c91d-4ed5-4f18-9101-0a9bf26696b2
+wave.nComponents
 
 # ╔═╡ Cell order:
 # ╠═ac91d146-a4d4-44a7-ace7-fdb770f0b367
@@ -153,6 +157,7 @@ end
 # ╟─f8b9004d-22ae-49b5-a77a-3893577448d3
 # ╟─cd663bf7-07ca-4bb5-aff9-8f832b8c7215
 # ╟─672f4203-9540-405b-8834-e381fdf207e4
-# ╠═aa7d7d32-8f5c-4978-b070-ee1ac080f564
+# ╟─aa7d7d32-8f5c-4978-b070-ee1ac080f564
 # ╠═c3024e1c-f7cf-47ea-844a-2f6936b3ca80
 # ╠═0211f9c6-8d8d-4b90-afc7-ed123b32cc56
+# ╠═c337c91d-4ed5-4f18-9101-0a9bf26696b2
