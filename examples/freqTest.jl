@@ -38,9 +38,12 @@ input[type*="range"] {
 begin
 	filename = "C:\\Users\\chris\\.julia\\dev\\InhomogeneousBathymetryEuler.jl\\examples\\Data_Sensors\\Without_Bathymetry\\Heat1.txt"
 	sensor = 1
+	sensor_pos = [0.0,2.0,4.0,6.0]
+	x = sensor_pos[sensor]
+	z = 0.0
 	eta = convert(Vector{Float64},readdlm(filename)[2:end,sensor])/100
 	time = convert(Vector{Float64},readdlm(filename)[2:end,5])
-end
+end;
 
 # ╔═╡ e4cc7114-3b89-48e7-847a-06bd961e10d8
 md"""
@@ -107,6 +110,9 @@ begin
 	selected_coeffs = coeff[selected_freq_inds]
 end;
 
+# ╔═╡ 7879feb3-c1af-42a5-8fe1-e9b49e8467c8
+length(selected_freq_inds)
+
 # ╔═╡ aa7d7d32-8f5c-4978-b070-ee1ac080f564
 begin
 	f1 = Figure()
@@ -118,8 +124,8 @@ end
 # ╔═╡ c3024e1c-f7cf-47ea-844a-2f6936b3ca80
 begin
 	filtered_coeff = zeros(eltype(coeff),size(coeff))
-	filtered_coeff[selected_freq_inds] = coeff[selected_freq_inds]
-	filtered_coeff[end.-(selected_freq_inds.-1)] = coeff[end.-(selected_freq_inds.-1)]
+	filtered_coeff[selected_freq_inds] = 2*coeff[selected_freq_inds]
+	#filtered_coeff[end.-(selected_freq_inds.-1)] = coeff[end.-(selected_freq_inds.-1)]
 	reconstruction = real.(ifft(filtered_coeff))
 	f = Figure()
 	ax = Axis(f[1,1],title="Fourier Representation")
@@ -131,20 +137,45 @@ end
 
 # ╔═╡ 0211f9c6-8d8d-4b90-afc7-ed123b32cc56
 begin
-	wave_amps = real.(vcat(coeff[selected_freq_inds], coeff[end.-(selected_freq_inds.-1)]))
-	wave_freqs = 2*pi*vcat(freqs[selected_freq_inds],freqs[end.-(selected_freq_inds.-1)])
+	wave_amps = 2*real.(coeff[selected_freq_inds])
+	wave_freqs = 2*pi*collect(freqs[selected_freq_inds])
 	phases = zeros(size(wave_amps))
-	wave = IrregWave(wave_amps,wave_freqs,phases,hasFadeIn=false)
+	wave = IrregWave(wave_amps[2:end]/9.81,wave_freqs[2:end],phases[2:end],hasFadeIn=false)
 end
 
-# ╔═╡ c337c91d-4ed5-4f18-9101-0a9bf26696b2
-wave.nComponents
+# ╔═╡ 4a5ee091-12e3-406d-a39d-5554b3754db9
+begin
+	analyticPotential_dt(x,z,10.0,0.3,wave)
+	dphidt = [analyticPotential_dt(x,z,t,0.3,wave) for t in selected_time]
+	comp_eta = -1/9.81*dphidt
+	f2 = Figure()
+	ax2 = Axis(f2[1,1])
+	lines!(ax2,selected_time,selected_eta,label="original")
+	lines!(ax2,selected_time,reconstruction,label="filtered")
+	lines!(ax2,selected_time,comp_eta,label="ana_pot")
+	axislegend(position = :lb)
+	f2
+end
+
+# ╔═╡ fec997f1-6618-4c7f-a89c-c2f3bf7092c6
+begin
+	if wave_freqs[1] == 0
+		freq_save = wave_freqs[2:end]
+		amp_save = wave_amps[2:end]
+		phase_save = phases[2:end]
+	else
+		freq_save = wave_freqs
+		amp_save = wave_amps
+		phase_save = phases
+	end
+	save("sensorFreqs.jld","wave_amps",amp_save,"wave_freqs",freq_save,"phases",phase_save)
+end
 
 # ╔═╡ Cell order:
 # ╠═ac91d146-a4d4-44a7-ace7-fdb770f0b367
 # ╠═7e8dab8d-fc6e-4a67-8ba1-87e48955b627
 # ╠═2deecc02-48f9-46d3-8ac2-fba747562cbb
-# ╟─26daba59-0f1d-4dbe-8e70-1cc78ddb2f5e
+# ╠═26daba59-0f1d-4dbe-8e70-1cc78ddb2f5e
 # ╟─e4cc7114-3b89-48e7-847a-06bd961e10d8
 # ╟─66c4193d-fbc2-4a67-84dd-ef18652171b6
 # ╟─f8c7bc9c-76ab-4c4c-aff6-238e622a21bf
@@ -157,7 +188,9 @@ wave.nComponents
 # ╟─f8b9004d-22ae-49b5-a77a-3893577448d3
 # ╟─cd663bf7-07ca-4bb5-aff9-8f832b8c7215
 # ╟─672f4203-9540-405b-8834-e381fdf207e4
+# ╠═7879feb3-c1af-42a5-8fe1-e9b49e8467c8
 # ╟─aa7d7d32-8f5c-4978-b070-ee1ac080f564
 # ╠═c3024e1c-f7cf-47ea-844a-2f6936b3ca80
 # ╠═0211f9c6-8d8d-4b90-afc7-ed123b32cc56
-# ╠═c337c91d-4ed5-4f18-9101-0a9bf26696b2
+# ╠═4a5ee091-12e3-406d-a39d-5554b3754db9
+# ╠═fec997f1-6618-4c7f-a89c-c2f3bf7092c6

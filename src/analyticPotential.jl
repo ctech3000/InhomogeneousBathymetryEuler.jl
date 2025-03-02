@@ -29,6 +29,7 @@ function analyticPotential(x::Real, z::Real, t::Real, h::Real, wave::SimpleWave)
     freq = getFreq(wave)
     phase = wave.phase
     k = computeWaveNumber(freq,h)
+    @show GRAV*amp/freq*cosh(k*(z+h))/cosh(k*h)*sin(k*x - freq*t - phase), k
     return GRAV*amp/freq*cosh(k*(z+h))/cosh(k*h)*sin(k*x - freq*t - phase)
 end
 
@@ -87,7 +88,30 @@ function analyticPotential_dz(x::Real, z::Real, t::Real, h::Real, wave::IrregWav
 end
 
 function analyticPotential_dz(x::Vector{T}, z::Vector{T}, t::Real, h::Real, wave::AbstractWave) where T<:Real
-    return analyticPotential_dx.(x,z,(t,),(h,),(wave,))
+    return analyticPotential_dz.(x,z,(t,),(h,),(wave,))
+end
+
+function analyticPotential_dt(x::Real, z::Real, t::Real, h::Real, wave::SimpleWave)
+    amp = wave.amp
+    if wave.hasFadeIn
+        amp *= wave.fadeIn(t)   # missing: d/dt of ramp function!!
+    end
+    freq = wave.freq
+    phase = wave.phase
+    k = computeWaveNumber(freq,h)
+    return -GRAV*amp*cosh(k*(z+h))/cosh(k*h)*cos(k*x - freq*t - phase)
+end
+
+function analyticPotential_dt(x::Real, z::Real, t::Real, h::Real, wave::IrregWave)
+    val = 0.0
+    for compWave in wave.waveList
+        val += analyticPotential_dt(x,z,t,h,compWave)
+    end
+    return val
+end
+
+function analyticPotential_dt(x::Vector{T}, z::Vector{T}, t::Real, h::Real, wave::AbstractWave) where T<:Real
+    return analyticPotential_dt.(x,z,(t,),(h,),(wave,))
 end
 
 function transformedAnalyticPotential(χ::Real, σ::Real, t::Real, h::Real, wave::SimpleWave, trans::σTransform)

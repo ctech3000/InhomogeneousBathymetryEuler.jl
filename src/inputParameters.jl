@@ -41,7 +41,7 @@ struct IrregWave <: AbstractWave
     dom_freq::Real
 end
 
-function IrregWave(amps::Vector{T},freqs::Vector{T},phases::Vector{T};hasFadeIn::Bool=true) where T <: Real
+function IrregWave(amps::Vector{T},freqs::Vector{T},phases::Vector{T};hasFadeIn::Bool=true,k_cutoff::Real=50.0) where T <: Real
     nComponents = length(amps)
     dom_ind = argmax(amps)
     dom_freq = freqs[dom_ind]
@@ -49,9 +49,21 @@ function IrregWave(amps::Vector{T},freqs::Vector{T},phases::Vector{T};hasFadeIn:
     
     waveList = Vector{SimpleWave}(undef,nComponents)
     for i = 1:nComponents
+        if computeWaveNumber(freqs[i],1.0) > k_cutoff
+            print("Warning in IrregWave: Cut after $(i) components due to high wavenumber (k=$(computeWaveNumber(freqs[i],1.0)))!\n")
+            return IrregWave(waveList[1:i-1],length(1:i-1),dom_amp,dom_freq)
+        end
         waveList[i] = SimpleWave(amps[i],freqs[i],phases[i],hasFadeIn=hasFadeIn)
     end
     return IrregWave(waveList,nComponents,dom_amp,dom_freq)
+end
+
+function IrregWave(filename::String;kwargs...)
+    d = JLD.load(filename)
+    wave_amps = d["wave_amps"]/GRAV
+    wave_freqs = d["wave_freqs"]
+    phases = d["phases"]
+    return IrregWave(wave_amps,wave_freqs,phases;kwargs...)
 end
 
 getFreq(wave::SimpleWave) = wave.freq

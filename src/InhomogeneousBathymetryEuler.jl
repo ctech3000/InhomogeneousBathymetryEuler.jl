@@ -2,7 +2,7 @@ module InhomogeneousBathymetryEuler
 
 using Interpolations, Ferrite, SparseArrays, ProgressBars, JLD, BSplineKit, PlutoUI, FFTW, DelimitedFiles
 
-export computeWaveNumber, analyticPotential, analyticPotential_dx, analyticPotential_dz, transformedAnalyticPotential, transformedAnalyticPotential_dχ, transformedAnalyticPotential_dσ
+export computeWaveNumber, analyticPotential, analyticPotential_dx, analyticPotential_dz, transformedAnalyticPotential, transformedAnalyticPotential_dχ, transformedAnalyticPotential_dσ, analyticPotential_dt
 export dirichlet_from_discretized_data, assemble_K_element!, assemble_K_global, assemble_Ms_global, assemble_f_element!, insert_into_f!, assemble_f_global, init_K_f, apply_dirichlet!, meandiag, init_K_M
 export get_boundary_coordinates, discretizeTransformedDomain
 export firstDerivative, dofToCoordinate
