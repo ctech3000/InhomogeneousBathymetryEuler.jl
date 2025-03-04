@@ -60,10 +60,10 @@ end
 
 function IrregWave(filename::String;kwargs...)
     d = JLD.load(filename)
-    wave_amps = d["wave_amps"]/GRAV
-    wave_freqs = d["wave_freqs"]
-    phases = d["phases"]
-    return IrregWave(wave_amps,wave_freqs,phases;kwargs...)
+    amps = d["wave_amps"]/GRAV
+    freqs = d["wave_freqs"]
+    phases = d["wave_phases"]
+    return IrregWave(amps,freqs,phases;kwargs...), d["time"]
 end
 
 getFreq(wave::SimpleWave) = wave.freq
@@ -151,19 +151,6 @@ function DomainProperties(x_L::Real, x_R::Real, bath::Bathymetry, wave::Abstract
     return DomainProperties(x_L,x_R,bath,b_L,wave)
 end
 
-# Standarddomain
-function DomainProperties(bathymetryPoints::Vector{T}, wave::AbstractWave) where T<:Real
-    bath = Bathymetry(bathymetryPoints)
-    x_L = 0.0
-    x_R = 20.0
-    return DomainProperties(x_L,x_R,bath,wave)
-end
-
-function DomainProperties(bathymetryPoints::Vector{T}) where T<:Real
-    wave = SimpleWave()
-    return DomainProperties(bathymetryPoints,wave)
-end
-
 struct DampedDomainProperties <: AbstractDomain
     x_L::Float64
     x_D::Float64
@@ -185,18 +172,6 @@ function DampedDomainProperties(x_L::Float64, x_D::Float64, x_R::Float64, bath::
     return DampedDomainProperties(x_L,x_D,x_R,bath,b_L,wave,μ_D)
 end
 
-function DampedDomainProperties(wave::AbstractWave, bathymetryPoints::Vector{Float64})
-    bath = Bathymetry(bathymetryPoints)
-    x_L = 0.0
-    x_D = 12.0
-    x_R = 20.0
-    return DampedDomainProperties(x_L,x_D,x_R,bath,wave)
-end
-
-function DampedDomainProperties(bathymetryPoints::Vector{T}) where T<:Real
-    wave = SimpleWave()
-    return DampedDomainProperties(wave,bathymetryPoints)
-end
 
 abstract type AbstractTimeSteppingMethod end
 
@@ -215,3 +190,4 @@ function OutflowBC(val::Int)
         print("Not a valid input for OutflowBC!")
     end
 end
+

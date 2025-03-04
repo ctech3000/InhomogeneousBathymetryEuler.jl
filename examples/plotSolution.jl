@@ -6,7 +6,7 @@ ax = Axis3(f[1, 1], xlabel = "χ", ylabel = "σ", zlabel="ϕ")
 surface!(ax,χs,σs,all_phis[200])
 f
 
-lap = InhomogeneousBathymetryEuler.laplace(all_phis[2], Dχ, Dσ, domain)
+lap = InhomogeneousBathymetryEuler.laplace(all_phis[2], Dχ, Dσ, trans, χs, σs)
 f1 = Figure()
 ax1 = Axis3(f1[1, 1], xlabel = "χ", ylabel = "σ", zlabel = "Δϕ",title="Laplace in domain")
 surface!(ax1,χs[2:end-1],σs[2:end-1],lap)

@@ -112,6 +112,20 @@ function solve_all_timesteps(LHS_matrix::SparseMatrixCSC, LHS_matrix_init::Spars
     end
 end;
 
+function solve_all_timesteps!(sensors::Sensors,LHS_matrix::SparseMatrixCSC, LHS_matrix_init::SparseMatrixCSC, M_T0::SparseMatrixCSC, M_T1::SparseMatrixCSC, domain::AbstractDomain, trans::σTransform, χs::Vector{Float64}, σs::Vector{Float64}, time_vec::Vector{Float64}, timeMethod::AbstractTimeSteppingMethod, facetvalues::FacetValues, dh::DofHandler, ch::ConstraintHandler, outflow::OutflowBC, D_inflow_boundary::Vector{Vector{Float64}}; save_phi::Bool=false)
+    if save_phi
+        all_etas, all_phis = solve_all_timesteps(LHS_matrix, LHS_matrix_init, M_T0, M_T1, domain, trans, χs, σs, time_vec, timeMethod, facetvalues, dh, ch, outflow, D_inflow_boundary, save_phi=save_phi);
+        extractSensorData!(sensors,all_etas,χs)
+        return all_etas, all_phis, sensors
+    else
+        all_etas = solve_all_timesteps(LHS_matrix, LHS_matrix_init, M_T0, M_T1, domain, trans, χs, σs, time_vec, timeMethod, facetvalues, dh, ch, outflow, D_inflow_boundary, save_phi=save_phi);
+        extractSensorData!(sensors,all_etas,χs)
+        return all_etas, sensors
+    end 
+
+
+end
+
 #= function solve_all_timesteps(K::SparseMatrixCSC, K_init::SparseMatrixCSC, domain::AbstractDomain, trans::σTransform, χs::Vector{Float64}, σs::Vector{Float64}, time_vec::Vector{Float64}, facetvalues::FacetValues, dh::DofHandler, ch::ConstraintHandler, D_inflow_boundary::Vector{Vector{Float64}}; save_phi::Bool=false)
     nχ = length(χs) - 1
     nσ = length(σs) - 1

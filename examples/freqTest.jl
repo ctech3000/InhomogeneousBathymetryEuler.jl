@@ -52,7 +52,7 @@ Select start time.
 
 # ╔═╡ 66c4193d-fbc2-4a67-84dd-ef18652171b6
 begin
-	@bind t_start PlutoUI.Slider(time, default = time[1], show_value=true)
+	@bind t_start PlutoUI.Slider(time, default = 35.92, show_value=true)
 end
 
 # ╔═╡ f8c7bc9c-76ab-4c4c-aff6-238e622a21bf
@@ -61,7 +61,7 @@ Select end time.
 """
 
 # ╔═╡ b5634eba-2bc9-4de5-a13e-afb4a7cb38e7
-@bind t_end PlutoUI.Slider(time, default = length(time), show_value=true)
+@bind t_end PlutoUI.Slider(time, default = 44.55, show_value=true)
 
 # ╔═╡ 8ae9e601-bbdd-4e72-b8b0-13218d77e91c
 begin
@@ -77,98 +77,75 @@ begin
 	lines(selected_time,selected_eta)
 end
 
-# ╔═╡ fa87a573-6ff9-4a90-9c96-f1fa93356308
-begin 
-	Fs = 100
-	N = length(selected_time_inds)
-	freqs = 0:Fs/N:(N-1)*Fs/N
-	coeff = (fft(selected_eta))
+# ╔═╡ 5f652052-e23b-409d-8776-074e13a49699
+begin
+	N_t = length(selected_time)-1
+	dt = (t_end - t_start)/(N_t+1)
+	shifted_time = selected_time[1:end-1] .- selected_time[1] .+ 1/2*dt
+	t_N = shifted_time[end]
+	shifted_eta = [(selected_eta[i]+selected_eta[i+1])/2 for i = 1:N_t]
+	coeff = dct(shifted_eta)
+	omegas = [pi*k/t_N for k=0:N_t-1]
+	amps = sqrt(2/N_t)*coeff
+	cos_reco = [sum(amps.*cos.(omegas*t)) for t in shifted_time]
 end;
 
-# ╔═╡ cd2f1498-7cd9-467e-a094-a319c8ac3d49
+# ╔═╡ 0860d49f-33b1-4385-8aad-5d06c44715d4
 md"""
-Select start frequency.
+Select maximum k (number of components).
 """
 
-# ╔═╡ f845464e-5c48-479b-86c6-f90115692986
-@bind start_frequency PlutoUI.Slider(freqs,default = freqs[1], show_value = true)
+# ╔═╡ 3c85ca95-00a7-4307-ae5f-9c6f9833d2f9
+@bind max_k PlutoUI.Slider(eachindex(coeff), default = eachindex(coeff)[end], show_value=true)
 
-# ╔═╡ f8b9004d-22ae-49b5-a77a-3893577448d3
-md"""
-Select end frequency.
-"""
-
-# ╔═╡ cd663bf7-07ca-4bb5-aff9-8f832b8c7215
-@bind end_frequency PlutoUI.Slider(freqs[1:round(Integer,length(freqs)/2)],default = freqs[end], show_value = true)
-
-# ╔═╡ 672f4203-9540-405b-8834-e381fdf207e4
+# ╔═╡ d4cb9ea5-7b1e-47d6-ba81-d434c4624727
 begin
-	freq_start_ind = findall(x->x==start_frequency,freqs)[1]
-	freq_end_ind = findall(x->x==end_frequency,freqs)[1]
-	selected_freq_inds = freq_start_ind:freq_end_ind
-	selected_freqs = freqs[selected_freq_inds]
-	selected_coeffs = coeff[selected_freq_inds]
+	filtered_amps = amps[1:max_k]
+	filtered_omegas = omegas[1:max_k]
+	filtered_cos_reco = [sum(filtered_amps.*cos.(filtered_omegas*t)) for t in shifted_time]
 end;
 
-# ╔═╡ 7879feb3-c1af-42a5-8fe1-e9b49e8467c8
-length(selected_freq_inds)
-
-# ╔═╡ aa7d7d32-8f5c-4978-b070-ee1ac080f564
+# ╔═╡ 3edc7820-70e5-4128-a472-a7ab7a1c095f
 begin
-	f1 = Figure()
-	ax1 = Axis(f1[1,1],title="selected amps")
-	lines!(ax1,2*pi*selected_freqs,real.(selected_coeffs))
-	f1
-end
-
-# ╔═╡ c3024e1c-f7cf-47ea-844a-2f6936b3ca80
-begin
-	filtered_coeff = zeros(eltype(coeff),size(coeff))
-	filtered_coeff[selected_freq_inds] = 2*coeff[selected_freq_inds]
-	#filtered_coeff[end.-(selected_freq_inds.-1)] = coeff[end.-(selected_freq_inds.-1)]
-	reconstruction = real.(ifft(filtered_coeff))
-	f = Figure()
-	ax = Axis(f[1,1],title="Fourier Representation")
-	lines!(ax,selected_time,selected_eta,label="original")
-	lines!(ax,selected_time,reconstruction,label="filtered")
+	fig3 = Figure(size = (600,900))
+	ax3 = Axis(fig3[1,1],xlabel="t",title="reconstruction")
+	lines!(ax3,shifted_time,selected_eta[1:end-1],label="orig.")
+	lines!(ax3,shifted_time,filtered_cos_reco, label="filtered cos_reco")
 	axislegend(position = :lb)
-	f
+	ax3_5 = Axis(fig3[2,1],title="coefficients")
+	lines!(ax3_5,filtered_omegas,filtered_amps)
+	fig3
 end
 
-# ╔═╡ 0211f9c6-8d8d-4b90-afc7-ed123b32cc56
+# ╔═╡ 4f9c2646-6552-4cfa-9ff8-b8eefba7de86
 begin
-	wave_amps = 2*real.(coeff[selected_freq_inds])
-	wave_freqs = 2*pi*collect(freqs[selected_freq_inds])
-	phases = zeros(size(wave_amps))
-	wave = IrregWave(wave_amps[2:end]/9.81,wave_freqs[2:end],phases[2:end],hasFadeIn=false)
-end
-
-# ╔═╡ 4a5ee091-12e3-406d-a39d-5554b3754db9
-begin
-	analyticPotential_dt(x,z,10.0,0.3,wave)
-	dphidt = [analyticPotential_dt(x,z,t,0.3,wave) for t in selected_time]
-	comp_eta = -1/9.81*dphidt
-	f2 = Figure()
-	ax2 = Axis(f2[1,1])
-	lines!(ax2,selected_time,selected_eta,label="original")
-	lines!(ax2,selected_time,reconstruction,label="filtered")
-	lines!(ax2,selected_time,comp_eta,label="ana_pot")
+	phases = zeros(size(filtered_amps))
+	wave = IrregWave(filtered_amps[2:end],filtered_omegas[2:end],phases[2:end],hasFadeIn=false)
+	comp_eta = -1/9.81*[analyticPotential_dt(0,0,t,0.3,wave) for t in shifted_time]
+	fig4 = Figure()
+	ax4 = Axis(fig4[1,1])
+	lines!(ax4,shifted_time,selected_eta[1:end-1],label="orig.")
+	lines!(ax4,shifted_time,filtered_cos_reco, label="filtered cos_reco")
+	lines!(ax4,shifted_time,comp_eta,label="comp_eta")
 	axislegend(position = :lb)
-	f2
+	fig4
 end
 
-# ╔═╡ fec997f1-6618-4c7f-a89c-c2f3bf7092c6
-begin
-	if wave_freqs[1] == 0
-		freq_save = wave_freqs[2:end]
-		amp_save = wave_amps[2:end]
+# ╔═╡ 3ac0bd7a-0248-4e18-b64e-32ec0d9c7404
+save_data = false
+
+# ╔═╡ 7529d603-1211-464c-903c-e45ffccc6c2f
+if save_data
+	if abs(filtered_omegas[1]) < 10^-6
+		freq_save = filtered_omegas[2:end]
+		amp_save = filtered_amps[2:end]
 		phase_save = phases[2:end]
 	else
-		freq_save = wave_freqs
-		amp_save = wave_amps
+		freq_save = filtered_omegas
+		amp_save = filtered_amps
 		phase_save = phases
 	end
-	save("sensorFreqs.jld","wave_amps",amp_save,"wave_freqs",freq_save,"phases",phase_save)
+	save("sensorFreqs.jld","wave_amps",amp_save,"wave_freqs",freq_save,"wave_phases",phase_save, "time", shifted_time)
 end
 
 # ╔═╡ Cell order:
@@ -182,15 +159,11 @@ end
 # ╟─b5634eba-2bc9-4de5-a13e-afb4a7cb38e7
 # ╟─8ae9e601-bbdd-4e72-b8b0-13218d77e91c
 # ╟─1ecbc240-6615-4249-8032-f569f1fb8524
-# ╠═fa87a573-6ff9-4a90-9c96-f1fa93356308
-# ╟─cd2f1498-7cd9-467e-a094-a319c8ac3d49
-# ╟─f845464e-5c48-479b-86c6-f90115692986
-# ╟─f8b9004d-22ae-49b5-a77a-3893577448d3
-# ╟─cd663bf7-07ca-4bb5-aff9-8f832b8c7215
-# ╟─672f4203-9540-405b-8834-e381fdf207e4
-# ╠═7879feb3-c1af-42a5-8fe1-e9b49e8467c8
-# ╟─aa7d7d32-8f5c-4978-b070-ee1ac080f564
-# ╠═c3024e1c-f7cf-47ea-844a-2f6936b3ca80
-# ╠═0211f9c6-8d8d-4b90-afc7-ed123b32cc56
-# ╠═4a5ee091-12e3-406d-a39d-5554b3754db9
-# ╠═fec997f1-6618-4c7f-a89c-c2f3bf7092c6
+# ╟─5f652052-e23b-409d-8776-074e13a49699
+# ╟─0860d49f-33b1-4385-8aad-5d06c44715d4
+# ╟─3c85ca95-00a7-4307-ae5f-9c6f9833d2f9
+# ╟─d4cb9ea5-7b1e-47d6-ba81-d434c4624727
+# ╟─3edc7820-70e5-4128-a472-a7ab7a1c095f
+# ╠═4f9c2646-6552-4cfa-9ff8-b8eefba7de86
+# ╠═3ac0bd7a-0248-4e18-b64e-32ec0d9c7404
+# ╠═7529d603-1211-464c-903c-e45ffccc6c2f
