@@ -132,7 +132,7 @@ function assemble_Ms_global(facetvalues::FacetValues, dh::DofHandler, D_surface_
     return M_T0, M_T1, M_T2
 end
 
-function assemble_f_element!(fe::Vector, facetvalues::FacetValues, facet::FacetCache, De::Vector, trans::σTransform, wave::AbstractWave, t_p::Real)
+function assemble_g_element!(fe::Vector, facetvalues::FacetValues, facet::FacetCache, De::Vector, trans::σTransform, wave::AbstractWave, t_p::Real)
     n_basefuncs = getnbasefunctions(facetvalues)
     fill!(fe,0)
     node_coords = getcoordinates(facet)
@@ -159,22 +159,22 @@ function insert_into_f!(f::Vector, fe::Vector, facetvalues::FacetValues,facet::F
     end
 end
 
-function assemble_f_global(facetvalues::FacetValues, dh::DofHandler, D_inflow_boundary::Vector{Vector{Float64}}, trans::σTransform, wave::AbstractWave, t_p::Real)
+function assemble_g_global(facetvalues::FacetValues, dh::DofHandler, D_inflow_boundary::Vector{Vector{Float64}}, trans::σTransform, wave::AbstractWave, t_p::Real)
     n_basefuncs = getnbasefunctions(facetvalues)
-    fe = zeros(n_basefuncs)
-    f = zeros(ndofs(dh))
+    ge = zeros(n_basefuncs)
+    g = zeros(ndofs(dh))
     for (facet_idx,facet) in enumerate(FacetIterator(dh,getfacetset(dh.grid,"right")))
         reinit!(facetvalues,facet)
         De = D_inflow_boundary[facet_idx]
-        assemble_f_element!(fe, facetvalues, facet, De, trans, wave, t_p)
-        insert_into_f!(f,fe,facetvalues,facet)
+        assemble_g_element!(ge, facetvalues, facet, De, trans, wave, t_p)
+        insert_into_f!(g,ge,facetvalues,facet)
     end
-    return f
+    return g
 end
 
-function init_K_f(cellvalues::CellValues, facetvalues::FacetValues, dh::DofHandler,domain::AbstractDomain,B_domain::Vector{Vector{Float64}}, B_tilde_domain::Vector{Vector{Float64}}, D_domain::Vector{Vector{Float64}}, D_inflow_boundary::Vector{Vector{Float64}}, trans::σTransform, χs::Vector{T}) where T<:Real
+function init_K_g(cellvalues::CellValues, facetvalues::FacetValues, dh::DofHandler,domain::AbstractDomain,B_domain::Vector{Vector{Float64}}, B_tilde_domain::Vector{Vector{Float64}}, D_domain::Vector{Vector{Float64}}, D_inflow_boundary::Vector{Vector{Float64}}, trans::σTransform, χs::Vector{T}) where T<:Real
     K = assemble_K_global(cellvalues,dh,domain,B_domain,B_tilde_domain,D_domain,trans)
-    f = assemble_f_global(facetvalues,dh,D_inflow_boundary,trans,domain.wave,0.0)
+    g = assemble_g_global(facetvalues,dh,D_inflow_boundary,trans,domain.wave,0.0)
     K_init = deepcopy(K)
 
     ch = ConstraintHandler(dh)
@@ -182,7 +182,7 @@ function init_K_f(cellvalues::CellValues, facetvalues::FacetValues, dh::DofHandl
     dbc = dirichlet_from_discretized_data(dh.grid, :phi, "bottom", phi_surface_curr1) # "bottom", because in transformed domain coordinates are flipped
     add!(ch, dbc);
     close!(ch)
-    apply!(K,f,ch)
+    apply!(K,g,ch)
 
     return K, K_init, ch
 end
@@ -191,7 +191,7 @@ function init_K_M(cellvalues::CellValues, facetvalues::FacetValues, dh::DofHandl
     Dt = time_vec[2] - time_vec[1]
     K = assemble_K_global(cellvalues,dh,domain,B_domain,B_tilde_domain,D_domain,trans)
     K_init = deepcopy(K)
-    f = assemble_f_global(facetvalues,dh,D_inflow_boundary,trans,domain.wave,0.0)
+    g = assemble_g_global(facetvalues,dh,D_inflow_boundary,trans,domain.wave,0.0)
     M_T0, M_T1, M_T2 = assemble_Ms_global(facetvalues,dh,D_surface_boundary,domain,trans)
 
     LHS_matrix = compute_LHS_matrix(K, M_T0, M_T1, M_T2, Dt, timeMethod)
@@ -203,13 +203,13 @@ function init_K_M(cellvalues::CellValues, facetvalues::FacetValues, dh::DofHandl
         dbc = dirichlet_from_discretized_data(dh.grid, :phi, "left", zeros(Float64, nσ+1)) # "left", because in transformed domain coordinates are flipped
         add!(ch, dbc);
         close!(ch)
-        apply!(LHS_matrix,deepcopy(f),ch)
-        apply!(K,deepcopy(f),ch)
+        apply!(LHS_matrix,deepcopy(g),ch)
+        apply!(K,deepcopy(g),ch)
     elseif outflow.type == "Neumann"
         ch = ConstraintHandler(dh)
         close!(ch)
-        apply!(LHS_matrix,deepcopy(f),ch)
-        apply!(K,deepcopy(f),ch)
+        apply!(LHS_matrix,deepcopy(g),ch)
+        apply!(K,deepcopy(g),ch)
     end
     return K, K_init, M_T0, M_T1, M_T2, LHS_matrix, LHS_matrix_init, ch
 end

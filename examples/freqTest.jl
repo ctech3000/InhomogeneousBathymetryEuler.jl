@@ -23,7 +23,7 @@ begin
 end
 
 # ╔═╡ 7e8dab8d-fc6e-4a67-8ba1-87e48955b627
-using InhomogeneousBathymetryEuler, PlutoUI, GLMakie, FFTW, DelimitedFiles
+using InhomogeneousBathymetryEuler, PlutoUI, GLMakie, FFTW, DelimitedFiles, JLD2
 
 # ╔═╡ 2deecc02-48f9-46d3-8ac2-fba747562cbb
 html"""
@@ -36,14 +36,19 @@ input[type*="range"] {
 
 # ╔═╡ 26daba59-0f1d-4dbe-8e70-1cc78ddb2f5e
 begin
-	filename = "C:\\Users\\chris\\.julia\\dev\\InhomogeneousBathymetryEuler.jl\\examples\\Data_Sensors\\Without_Bathymetry\\Heat1.txt"
-	sensor = 1
-	sensor_pos = [0.0,2.0,4.0,6.0]
-	x = sensor_pos[sensor]
-	z = 0.0
-	eta = convert(Vector{Float64},readdlm(filename)[2:end,sensor])/100
-	time = convert(Vector{Float64},readdlm(filename)[2:end,5])
-end;
+	eta = zeros(Float64,10000)
+	time_sensor = zeros(Float64,10000)
+	for heat_idx = 1:20
+		filename = "C:\\Users\\chris\\.julia\\dev\\InhomogeneousBathymetryEuler.jl\\examples\\Data_Sensors\\Without_Bathymetry\\Heat$(heat_idx).txt"
+		sensor = 1
+		sensor_pos = [0.0,2.0,4.0,6.0]
+		x = sensor_pos[sensor]
+		z = 0.0
+		global eta += convert(Vector{Float64},readdlm(filename)[2:end,sensor])/100
+		global time_sensor = convert(Vector{Float64},readdlm(filename)[2:end,5])
+	end
+	eta /= 20
+end
 
 # ╔═╡ e4cc7114-3b89-48e7-847a-06bd961e10d8
 md"""
@@ -52,7 +57,7 @@ Select start time.
 
 # ╔═╡ 66c4193d-fbc2-4a67-84dd-ef18652171b6
 begin
-	@bind t_start PlutoUI.Slider(time, default = 35.92, show_value=true)
+	@bind t_start PlutoUI.Slider(time_sensor, default = 27.0, show_value=true)
 end
 
 # ╔═╡ f8c7bc9c-76ab-4c4c-aff6-238e622a21bf
@@ -61,14 +66,14 @@ Select end time.
 """
 
 # ╔═╡ b5634eba-2bc9-4de5-a13e-afb4a7cb38e7
-@bind t_end PlutoUI.Slider(time, default = 44.55, show_value=true)
+@bind t_end PlutoUI.Slider(time_sensor, default = 44.45, show_value=true)
 
 # ╔═╡ 8ae9e601-bbdd-4e72-b8b0-13218d77e91c
 begin
-	t_start_ind = findall(x->x==t_start,time)[1]
-	t_end_ind = findall(x->x==t_end,time)[1]
+	t_start_ind = findall(x->x==t_start,time_sensor)[1]
+	t_end_ind = findall(x->x==t_end,time_sensor)[1]
 	selected_time_inds = t_start_ind:t_end_ind
-	selected_time = time[selected_time_inds]
+	selected_time = time_sensor[selected_time_inds]
 	selected_eta = eta[selected_time_inds]
 end;
 
@@ -86,7 +91,7 @@ begin
 	shifted_eta = [(selected_eta[i]+selected_eta[i+1])/2 for i = 1:N_t]
 	coeff = dct(shifted_eta)
 	omegas = [pi*k/t_N for k=0:N_t-1]
-	amps = sqrt(2/N_t)*coeff
+	amps = sqrt(2/(N_t))*coeff
 	cos_reco = [sum(amps.*cos.(omegas*t)) for t in shifted_time]
 end;
 
@@ -96,7 +101,7 @@ Select maximum k (number of components).
 """
 
 # ╔═╡ 3c85ca95-00a7-4307-ae5f-9c6f9833d2f9
-@bind max_k PlutoUI.Slider(eachindex(coeff), default = eachindex(coeff)[end], show_value=true)
+@bind max_k PlutoUI.Slider(eachindex(coeff), default = 60, show_value=true)
 
 # ╔═╡ d4cb9ea5-7b1e-47d6-ba81-d434c4624727
 begin
@@ -126,26 +131,21 @@ begin
 	ax4 = Axis(fig4[1,1])
 	lines!(ax4,shifted_time,selected_eta[1:end-1],label="orig.")
 	lines!(ax4,shifted_time,filtered_cos_reco, label="filtered cos_reco")
-	lines!(ax4,shifted_time,comp_eta,label="comp_eta")
-	axislegend(position = :lb)
+	lines!(ax4,shifted_time,comp_eta.+amps[1],label="comp_eta")
+	axislegend(position = :lt)
 	fig4
 end
 
 # ╔═╡ 3ac0bd7a-0248-4e18-b64e-32ec0d9c7404
-save_data = false
+save_data = true
 
 # ╔═╡ 7529d603-1211-464c-903c-e45ffccc6c2f
 if save_data
-	if abs(filtered_omegas[1]) < 10^-6
-		freq_save = filtered_omegas[2:end]
-		amp_save = filtered_amps[2:end]
-		phase_save = phases[2:end]
-	else
-		freq_save = filtered_omegas
-		amp_save = filtered_amps
-		phase_save = phases
-	end
-	save("sensorFreqs.jld","wave_amps",amp_save,"wave_freqs",freq_save,"wave_phases",phase_save, "time", shifted_time)
+	freq_save = filtered_omegas
+	amp_save = filtered_amps
+	phase_save = phases
+	time_save = shifted_time
+	jldsave("sensorFreqsWith0.jld2";amp_save,freq_save,phase_save,time_save)
 end
 
 # ╔═╡ Cell order:
@@ -154,15 +154,15 @@ end
 # ╠═2deecc02-48f9-46d3-8ac2-fba747562cbb
 # ╠═26daba59-0f1d-4dbe-8e70-1cc78ddb2f5e
 # ╟─e4cc7114-3b89-48e7-847a-06bd961e10d8
-# ╟─66c4193d-fbc2-4a67-84dd-ef18652171b6
+# ╠═66c4193d-fbc2-4a67-84dd-ef18652171b6
 # ╟─f8c7bc9c-76ab-4c4c-aff6-238e622a21bf
 # ╟─b5634eba-2bc9-4de5-a13e-afb4a7cb38e7
-# ╟─8ae9e601-bbdd-4e72-b8b0-13218d77e91c
+# ╠═8ae9e601-bbdd-4e72-b8b0-13218d77e91c
 # ╟─1ecbc240-6615-4249-8032-f569f1fb8524
 # ╟─5f652052-e23b-409d-8776-074e13a49699
 # ╟─0860d49f-33b1-4385-8aad-5d06c44715d4
 # ╟─3c85ca95-00a7-4307-ae5f-9c6f9833d2f9
-# ╟─d4cb9ea5-7b1e-47d6-ba81-d434c4624727
+# ╠═d4cb9ea5-7b1e-47d6-ba81-d434c4624727
 # ╟─3edc7820-70e5-4128-a472-a7ab7a1c095f
 # ╠═4f9c2646-6552-4cfa-9ff8-b8eefba7de86
 # ╠═3ac0bd7a-0248-4e18-b64e-32ec0d9c7404

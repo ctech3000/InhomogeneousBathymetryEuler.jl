@@ -86,7 +86,7 @@ function solve_all_timesteps(LHS_matrix::SparseMatrixCSC, LHS_matrix_init::Spars
         
            
     for (t_idx,t_p) in ProgressBar(enumerate(time_vec[2:end]))
-        f = assemble_f_global(facetvalues,dh,D_inflow_boundary,trans,domain.wave,t_p)
+        g = assemble_g_global(facetvalues,dh,D_inflow_boundary,trans,domain.wave,t_p)
         RHS = compute_RHS(f,M_T0,M_T1,phi_curr,phi_old,phi_oldold,Dt,timeMethod)
         if outflow.type == "Dirichlet"
             apply_dirichlet!(RHS,LHS_matrix_init,zeros(Float64,nσ+1),ch)
@@ -144,7 +144,7 @@ end
 
 
     for (t_idx,t_p) in ProgressBar(enumerate(time_vec))
-        f = assemble_f_global(facetvalues,dh,D_inflow_boundary,trans,domain.wave,t_p)
+        g = assemble_g_global(facetvalues,dh,D_inflow_boundary,trans,domain.wave,t_p)
         apply_dirichlet!(f,K_init,phi_surface_curr,ch)
         phi_curr = evaluate_at_grid_nodes(dh,K\f,:phi)
         eta_curr = compute_eta(phi_old,phi_curr,domain,trans,Dt,nχ,χs::Vector{Float64})
@@ -168,7 +168,7 @@ end
 end
 
 function solve_one_timestep(K::SparseMatrixCSC, K_init::SparseMatrixCSC, dirichlet_data::Vector{Float64}, domain::AbstractDomain, trans::σTransform, t_p::Float64, facetvalues::FacetValues, dh::DofHandler, ch::ConstraintHandler, D_inflow_boundary::Vector{Vector{Float64}})
-    f = assemble_f_global(facetvalues,dh,D_inflow_boundary,trans,domain.wave,t_p)
+    g = assemble_g_global(facetvalues,dh,D_inflow_boundary,trans,domain.wave,t_p)
     apply_dirichlet!(f,K_init,dirichlet_data,ch)
     phi_curr = evaluate_at_grid_nodes(dh,K\f,:phi)
     return phi_curr

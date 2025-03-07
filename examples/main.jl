@@ -17,7 +17,7 @@ bath = Bathymetry(bathPoints,bathVals)
 #bath = Bathymetry(bathPoints,"Gauss",shift=5)
 #bath = Bathymetry(bathPoints,"Ramp",rampStart=4,rampEnd=6,rampHeightStart=-0.3,rampHeightEnd=-0.1)
 #wave = SimpleWave()     #λ=4.78
-wave, wave_time = IrregWave("examples/sensorFreqs.jld")
+wave, wave_time = IrregWave("examples/sensorFreqs.jld2")
 #domain = DomainProperties(x_L,x_R,bath,wave)
 domain = DampedDomainProperties(x_L,x_D,x_R,bath,wave)
 trans = σTransform(domain)

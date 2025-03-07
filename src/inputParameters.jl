@@ -22,7 +22,7 @@ end
 function SimpleWave() 
     amp = 0.0053740783
     freq = 2.199114857512855
-    phase = 2.7
+    phase = 0
     return SimpleWave(amp, freq, phase, hasFadeIn=true)
 end
 
@@ -59,11 +59,18 @@ function IrregWave(amps::Vector{T},freqs::Vector{T},phases::Vector{T};hasFadeIn:
 end
 
 function IrregWave(filename::String;kwargs...)
-    d = JLD.load(filename)
-    amps = d["wave_amps"]/GRAV
-    freqs = d["wave_freqs"]
-    phases = d["wave_phases"]
-    return IrregWave(amps,freqs,phases;kwargs...), d["time"]
+    d = JLD2.load(filename)
+    amps = d["amp_save"]
+    freqs = d["freq_save"]
+    phases = d["phase_save"]
+    amp0 = 0.0
+    if abs(freqs[1]) < 10^-13
+        amp0 = amps[1]
+        amps = amps[2:end]
+        freqs = freqs[2:end]
+        phases = phases[2:end]
+    end
+    return IrregWave(amps,freqs,phases;kwargs...), amp0, d["time_save"]
 end
 
 getFreq(wave::SimpleWave) = wave.freq

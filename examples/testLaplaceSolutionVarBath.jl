@@ -28,7 +28,7 @@ close!(dh);
 t_p = 0.0
 B_domain, B_tilde_domain, D_domain, D_inflow_boundary = compute_B_D(cellvalues,facetvalues,dh,domain,trans)
 K = assemble_K_global(cellvalues,dh,domain,B_domain,B_tilde_domain,D_domain)
-f = assemble_f_global(facetvalues,dh,D_inflow_boundary,trans,domain.wave,t_p)
+g = assemble_g_global(facetvalues,dh,D_inflow_boundary,trans,domain.wave,t_p)
 
 # set up dirichlet boundary conditions
 ch = ConstraintHandler(dh)
