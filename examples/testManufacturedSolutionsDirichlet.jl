@@ -9,7 +9,7 @@ outflow = OutflowBC("Dirichlet")
 bathPoints = collect(LinRange(x_L,x_R,nχ+1))
 #bath = Bathymetry(bathPoints,-3*ones(Float64,nχ+1))
 #bath = Bathymetry(bathPoints,"Gauss",shift=0.5,bHeight=0.3,depth=-1.0)
-bath = Bathymetry(bathPoints,"Ramp",rampStart=0.0,rampEnd=3.0,rampHeightStart=-3.0,rampHeightEnd=-2.0)
+bath = Bathymetry(bathPoints,"Ramp",rampStart=0.0,rampEnd=3.0,rampHeightStart=-3.0,rampHeightEnd=-3.0)
 #bath = Bathymetry(bathPoints,"TrueGauss",shift=1.5,bHeight=1, depth=-3.0)
 
 wave = SimpleWave()
@@ -121,9 +121,26 @@ f4 = Figure()
 ax4 = Axis3(f4[1,1],xlabel="χ",ylabel="σ")
 surface!(ax4,χs,σs,rhs_num)
 
-f4_5 = Figure()
+#= f4_5 = Figure()
 ax4_5 = Axis(f4_5[1,1],xlabel="χ",ylabel="Δϕ - rhs")
+σ_sl = Slider(f4_5[2, 1], range = eachindex(σs), startvalue = 1)
+rhs_slice = lift(σ_sl.value) do j
+    rhs_num[:,j]
+end
+lines!(ax4_5,χs[2:end-1],rhs_slice) =#
 
 f5 = Figure()
 ax5 = Axis3(f5[1,1],xlabel="χ",ylabel="σ")
 surface!(ax5,χs,σs,rhs_0)
+
+#= f6 = Figure()
+ax6 = Axis(f6[1,1],xlabel="χ",ylabel="Δϕ - rhs")
+σ_sl = Slider(f6[2, 1], range = 1:length(σs50)-2, startvalue = 1)
+rhs_slice = lift(σ_sl.value) do j
+    rhs_num[:,2*j-1]
+end
+rhs_slice50 = lift(σ_sl.value) do j
+    rhs_num50[:,j]
+end
+lines!(ax6,χs[2:end-1],rhs_slice)
+lines!(ax6,χs50[2:end-1],rhs_slice50) =#

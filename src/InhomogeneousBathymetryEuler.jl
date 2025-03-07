@@ -13,6 +13,7 @@ export computeDerivativeOnBoundary, laplace
 export GRAV
 export TrueSolution, assemble_f_global, assemble_g_global, coefficientVector, assemble_h_global, assemble_manufactured_global, assemble_f_global_alt
 export Sensors, extractSensorData!
+export computeError
 
 include("helpfulFunctions.jl")
 include("inputParameters.jl")
@@ -24,5 +25,6 @@ include("assemble.jl")
 include("timeStepping.jl")
 include("testSolution.jl")
 include("manufacturedSolution.jl")
+include("errorComputation.jl")
 
 end

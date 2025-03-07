@@ -1,0 +1,17 @@
+function computeError(u_ana::Matrix{Float64}, u_num::Matrix{Float64}, Dχ::Real;norm::String="L2")
+    if norm == "L2"
+        return computeErrorL2(u_ana,u_num, Dχ)
+    elseif norm == "max"
+        return computeErrorMax(u_ana,u_num)
+    else
+        print("Error in computeError: Invalid norm!\n")
+    end
+end
+
+function computeErrorL2(u_ana::Matrix{Float64}, u_num::Matrix{Float64}, Dχ::Real)
+    return sqrt.(sum((u_ana - u_num).^2)*Dχ^2)
+end
+
+function computeErrorMax(u_ana::Matrix{Float64}, u_num::Matrix{Float64})
+    return maximum(abs.(u_ana - u_num))
+end
