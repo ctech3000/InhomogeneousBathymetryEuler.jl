@@ -40,19 +40,27 @@ function Sensors(domain::AbstractDomain,trans::σTransform,time_vec::Vector{Floa
     return Sensors(pos,domain,trans,time_vec,"x")
 end
 
-function extractSensorData!(sensors::Sensors,etas::Vector{Vector{Float64}},χs::Vector{Float64})
+function extractSensorData!(sensors::Sensors,etas::Vector{Vector{Float64}},χs::Vector{Float64}; save_phi::Union{Bool,Tuple{Int64, Int64, Int64}}=false)
     nSensors = length(sensors.sensors_pos_x)
     interp_points = Vector{Any}(undef,nSensors)
+    if isa(save_phi,Tuple{Int64, Int64, Int64})
+        loc_χs = χs[1:save_phi[1]:end]
+        oldNTime = length(sensors.data[1])
+        newNTime = round(Integer,(oldNTime-1)/save_phi[3]+1)
+        sensors.data = [zeros(Float64,newNTime) for s = 1:nSensors]
+    else
+        loc_χs = χs
+    end
     for (sensor_idx,sensor_pos) in enumerate(sensors.sensors_pos_χ)
         i = 1
-        while sensor_pos > χs[i]
+        while sensor_pos > loc_χs[i]
             i += 1
         end
-        if sensor_pos == χs[i]
+        if sensor_pos == loc_χs[i]
             interp_points[sensor_idx] = [(i,1.0),(i,0.0)]
         else
-            d1 = sensor_pos - χs[i-1]
-            d2 = χs[i] - sensor_pos
+            d1 = sensor_pos - loc_χs[i-1]
+            d2 = loc_χs[i] - sensor_pos
             interp_points[sensor_idx] = [(i-1,d1),(i,d2)]
         end
     end

@@ -38,6 +38,9 @@ function analyticPotential(x::Real, z::Real, t::Real, h::Real, wave::IrregWave)
     for compWave in wave.waveList
         val += analyticPotential(x,z,t,h,compWave)
     end
+    if wave.hasFadeIn
+        val *= wave.fadeIn(t)
+    end
     return val
 end
 
@@ -60,6 +63,9 @@ function analyticPotential_dx(x::Real, z::Real, t::Real, h::Real, wave::IrregWav
     val = 0.0
     for compWave in wave.waveList
         val += analyticPotential_dx(x,z,t,h,compWave)
+    end
+    if wave.hasFadeIn
+        val *= wave.fadeIn(t)
     end
     return val
 end
@@ -84,6 +90,9 @@ function analyticPotential_dz(x::Real, z::Real, t::Real, h::Real, wave::IrregWav
     for compWave in wave.waveList
         val += analyticPotential_dz(x,z,t,h,compWave)
     end
+    if wave.hasFadeIn
+        val *= wave.fadeIn(t)
+    end
     return val
 end
 
@@ -93,21 +102,33 @@ end
 
 function analyticPotential_dt(x::Real, z::Real, t::Real, h::Real, wave::SimpleWave)
     amp = wave.amp
-    if wave.hasFadeIn
-        amp *= wave.fadeIn(t)   # missing: d/dt of ramp function!!
-    end
     freq = wave.freq
     phase = wave.phase
     k = computeWaveNumber(freq,h)
-    return -GRAV*amp*cosh(k*(z+h))/cosh(k*h)*cos(k*x - freq*t - phase)
+    pot_dt = -GRAV*amp*cosh(k*(z+h))/cosh(k*h)*cos(k*x - freq*t - phase)
+    if wave.hasFadeIn
+        tau = 2*pi/freq
+        fadeIn_dt = pi*sin(pi*t/(2*tau))/(4*tau)
+        pot = analyticPotential(x,z,t,h,wave)
+        return fadeIn_dt*pot + wave.fadeIn(t)*pot_dt
+    else
+        return pot_dt
+    end
 end
 
 function analyticPotential_dt(x::Real, z::Real, t::Real, h::Real, wave::IrregWave)
     val = 0.0
     for compWave in wave.waveList
-        val += analyticPotential_dt(x,z,t,h,compWave)
+        pot_dt += analyticPotential_dt(x,z,t,h,compWave)
     end
-    return val
+    if wave.hasFadeIn
+        tau = 2*pi/getFreq(wave)
+        fadeIn_dt = pi*sin(pi*t/(2*tau))/(4*tau)
+        pot = analyticPotential(x,z,t,h,wave)
+        return fadeIn_dt*pot + wave.fadeIn(t)*pot_dt
+    else
+        return pot_dt
+    end    
 end
 
 function analyticPotential_dt(x::Vector{T}, z::Vector{T}, t::Real, h::Real, wave::AbstractWave) where T<:Real
@@ -124,6 +145,9 @@ function transformedAnalyticPotential(χ::Real, σ::Real, t::Real, h::Real, wave
     val = 0.0
     for compWave in wave.waveList
         val += transformedAnalyticPotential(χ, σ, t, h, compWave, trans)
+    end
+    if wave.hasFadeIn
+        val *= wave.fadeIn(t)
     end
     return val
 end
@@ -146,6 +170,9 @@ function transformedAnalyticPotential_dχ(χ::Real, σ::Real, t::Real, h::Real, 
     for compWave in wave.waveList
         val += transformedAnalyticPotential_dχ(χ, σ, t, h, compWave, trans)
     end
+    if wave.hasFadeIn
+        val *= wave.fadeIn(t)
+    end
     return val
 end
 
@@ -166,9 +193,37 @@ function transformedAnalyticPotential_dσ(χ::Real, σ::Real, t::Real, h::Real, 
     for compWave in wave.waveList
         val += transformedAnalyticPotential_dσ(χ, σ, t, h, compWave, trans)
     end
+    if wave.hasFadeIn
+        val *= wave.fadeIn(t)
+    end
     return val
 end
 
 function transformedAnalyticPotential_dσ(χ::Vector{T}, σ::Vector{T}, t::Real, h::Real, wave::AbstractWave, trans::σTransform) where T<:Real
     return transformedAnalyticPotential_dσ.(χ,σ,(t,),(h,),(wave,),(trans,))
+end
+
+function transformedAnalyticPotential_dt(χ::Real, σ::Real, t::Real, h::Real, wave::SimpleWave, trans::σTransform)
+    x = trans.x.(χ)
+    z = trans.z.(χ,σ)
+    return analyticPotential_dt(x,z,t,h,wave)
+end
+
+function transformedAnalyticPotential_dt(χ::Real, σ::Real, t::Real, h::Real, wave::IrregWave, trans::σTransform)
+    val = 0.0
+    for compWave in wave.waveList
+        pot_dt += transformedAnalyticPotential_dt(χ, σ, t, h, compWave, trans)
+    end
+    if wave.hasFadeIn
+        tau = 2*pi/getFreq(wave)
+        fadeIn_dt = pi*sin(pi*t/(2*tau))/(4*tau)
+        pot = transformedAnalyticPotential(χ,σ,t,h,wave,trans)
+        return fadeIn_dt*pot + wave.fadeIn(t)*pot_dt
+    else
+        return pot_dt
+    end   
+end
+
+function transformedAnalyticPotential_dt(χ::Vector{T}, σ::Vector{T}, t::Real, h::Real, wave::AbstractWave, trans::σTransform) where T<:Real
+    return transformedAnalyticPotential_dt.(χ,σ,(t,),(h,),(wave,),(trans,))
 end

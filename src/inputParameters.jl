@@ -12,9 +12,9 @@ struct SimpleWave <: AbstractWave
 end
 
 function SimpleWave(amp::Real,freq::Real,phase::Real;hasFadeIn=true)
-    T = 2*pi/freq
+    tau = 2*pi/freq
 
-    fadeIn(t) = hasFadeIn ? (t < 2*T ? 1/2*(1-cos(pi*t/(2*T))) : 1.0) : 1.0
+    fadeIn(t) = hasFadeIn ? (t < 2*tau ? 1/2*(1-cos(pi*t/(2*tau))) : 1.0) : 1.0
     
     return SimpleWave(amp, freq, phase, fadeIn, hasFadeIn)
 end
@@ -39,6 +39,8 @@ struct IrregWave <: AbstractWave
     nComponents::Integer
     dom_amp::Real
     dom_freq::Real
+    fadeIn::Function
+    hasFadeIn::Bool
 end
 
 function IrregWave(amps::Vector{T},freqs::Vector{T},phases::Vector{T};hasFadeIn::Bool=true,k_cutoff::Real=50.0) where T <: Real
@@ -46,16 +48,19 @@ function IrregWave(amps::Vector{T},freqs::Vector{T},phases::Vector{T};hasFadeIn:
     dom_ind = argmax(amps)
     dom_freq = freqs[dom_ind]
     dom_amp = amps[dom_ind]
+    tau = 2*pi/dom_freq
+    fadeIn(t) = hasFadeIn ? (t < 2*tau ? 1/2*(1-cos(pi*t/(2*tau))) : 1.0) : 1.0
+
     
     waveList = Vector{SimpleWave}(undef,nComponents)
     for i = 1:nComponents
         if computeWaveNumber(freqs[i],1.0) > k_cutoff
             print("Warning in IrregWave: Cut after $(i) components due to high wavenumber (k=$(computeWaveNumber(freqs[i],1.0)))!\n")
-            return IrregWave(waveList[1:i-1],length(1:i-1),dom_amp,dom_freq)
+            return IrregWave(waveList[1:i-1],length(1:i-1),dom_amp,dom_freq,fadeIn,hasFadeIn)
         end
-        waveList[i] = SimpleWave(amps[i],freqs[i],phases[i],hasFadeIn=hasFadeIn)
+        waveList[i] = SimpleWave(amps[i],freqs[i],phases[i],hasFadeIn=false)
     end
-    return IrregWave(waveList,nComponents,dom_amp,dom_freq)
+    return IrregWave(waveList,nComponents,dom_amp,dom_freq,fadeIn,hasFadeIn)
 end
 
 function IrregWave(filename::String;kwargs...)
