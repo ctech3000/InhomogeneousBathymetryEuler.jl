@@ -16,7 +16,7 @@ for rampDiff_idx = eachindex(rampDiff)
         nχ = nχs[nχ_idx]
         nσ = nχ
         timeMethod = BackwardDiff()
-        outflow = OutflowBC("Dirichlet")
+        outflow = OutflowBC("Neumann")
         bathPoints = collect(LinRange(x_L,x_R,nχ+1))
         #bath = Bathymetry(bathPoints,-3*ones(Float64,nχ+1))
         #bath = Bathymetry(bathPoints,"Gauss",shift=0.5,bHeight=0.3,depth=-1.0)
@@ -80,8 +80,10 @@ for rampDiff_idx = eachindex(rampDiff)
         #h = assemble_h_global(facetvalues,dh,trans,u)
 
         ch = ConstraintHandler(dh)
-        dbc = dirichlet_from_discretized_data(dh.grid, :phi, "left", zeros(Float64, nσ+1)) # "left", because in transformed domain coordinates are flipped
-        add!(ch, dbc);
+        if outflow.type == "Dirichlet"
+            dbc = dirichlet_from_discretized_data(dh.grid, :phi, "left", zeros(Float64, nσ+1)) # "left", because in transformed domain coordinates are flipped
+            add!(ch, dbc);
+        end
         close!(ch)
         RHS = -f + g + h
         #apply_dirichlet!(RHS,K_init,zeros(Float64,nσ+1),ch)
