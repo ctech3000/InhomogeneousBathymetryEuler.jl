@@ -9,7 +9,7 @@ T = 20
 nχ_base = 200
 nσ_base = 3
 nt_base = 100
-facs = [2^i for i = 0:6]
+facs = [2^i for i = 0:5]
 nFacs = length(facs)
 
 etas = Vector{Vector{Vector{Float64}}}(undef,nFacs)
@@ -58,8 +58,8 @@ for i = eachindex(facs)
     phis[i] = all_phis
 end
 
-bathPoints = collect(LinRange(x_L,x_R,nχ_base*facs[end]))
-bathVals = -0.3*ones(Float64,nχ+1)
+bathPoints = collect(LinRange(x_L,x_R,nχ_base*facs[end]+1))
+bathVals = -0.3*ones(Float64,nχ_base*facs[end]+1)
 bath = Bathymetry(bathPoints,bathVals)
 wave = SimpleWave()
 domain = DampedDomainProperties(x_L,x_D,x_R,bath,wave)
