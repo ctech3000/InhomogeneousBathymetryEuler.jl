@@ -1,7 +1,15 @@
-using InhomogeneousBathymetryEuler
+using InhomogeneousBathymetryEuler, GLMakie, JLD2
 
 pwd()
-d = load("examples/Plots/convergenceDataRegEuler.jld2")
+inhom = false
+true_eta_ana = false
+
+if inhom
+    filename = "examples/Plots/convergenceDataRegEulerInhom.jld2"
+else
+    filename = "examples/Plots/convergenceDataRegEuler.jld2"
+end
+d = load(filename)
 
 wave = d["wave"]
 Dσs = d["Dσs"]
@@ -27,12 +35,15 @@ for disc = 1:nDiscs-1
     error_phi_L2_time[disc] = Vector{Float64}(undef,nt)
     error_eta_L2_time[disc] = Vector{Float64}(undef,nt)
     for t = relevant_ts
-        #error_phi_L2_time[disc][t] = computeError(phis[disc][t]relevant_χs,phis[disc+1][t]relevant_χs,Dχ,norm="L2")
-        #error_eta_L2_time[disc][t] = computeError(etas[disc][t][relevant_χs],etas[disc+1][t][relevant_χs],Dχ,norm="L2")
-        error_eta_L2_time[disc][t] = computeError(etas[disc][t][relevant_χs],eta_ana[t],Dχ,norm="L2")
+        error_phi_L2_time[disc][t] = computeError(phis[disc][t][relevant_χs],phis[disc+1][t][relevant_χs],Dχ,norm="L2")
+        if true_eta_ana
+            error_eta_L2_time[disc][t] = computeError(etas[disc][t][relevant_χs],eta_ana[t],Dχ,norm="L2")
+        else
+            error_eta_L2_time[disc][t] = computeError(etas[disc][t][relevant_χs],etas[disc+1][t][relevant_χs],Dχ,norm="L2")
+        end
     end
 end
-#error_phi_L2_max = [maximum(error_phi_L2_time[disc]) for disc = 1:nDiscs-1]
+error_phi_L2_max = [maximum(error_phi_L2_time[disc]) for disc = 1:nDiscs-1]
 error_eta_L2_max = [maximum(error_eta_L2_time[disc]) for disc = 1:nDiscs-1]
 
 # compute errors L2 in space
@@ -42,19 +53,29 @@ for disc = 1:nDiscs-1
     error_phi_max_time[disc] = Vector{Float64}(undef,nt)
     error_eta_max_time[disc] = Vector{Float64}(undef,nt)
     for t = relevant_ts
-        #error_phi_max_time[disc][t] = computeError(phis[disc][t]relevant_χs,phis[disc+1][t]relevant_χs,Dχ,norm="max")
-        #error_eta_max_time[disc][t] = computeError(etas[disc][t][relevant_χs],etas[disc+1][t][relevant_χs],Dχ,norm="max")
-        error_eta_max_time[disc][t] = computeError(etas[disc][t][relevant_χs],eta_ana[t],Dχ,norm="max")
+        error_phi_max_time[disc][t] = computeError(phis[disc][t][relevant_χs],phis[disc+1][t][relevant_χs],Dχ,norm="max")
+        if true_eta_ana
+            error_eta_max_time[disc][t] = computeError(etas[disc][t][relevant_χs],eta_ana[t],Dχ,norm="max")
+        else
+            error_eta_max_time[disc][t] = computeError(etas[disc][t][relevant_χs],etas[disc+1][t][relevant_χs],Dχ,norm="max")
+        end
     end
 end
-#error_phi_max_max = [maximum(error_phi_max_time[disc]) for disc = 1:nDiscs-1]
+error_phi_max_max = [maximum(error_phi_max_time[disc]) for disc = 1:nDiscs-1]
 error_eta_max_max = [maximum(error_eta_max_time[disc]) for disc = 1:nDiscs-1]
 
+if inhom
+    suffix = " inhom. bathymetry"
+else
+    suffix = " hom. bathymetry"
+end
 fig1 = Figure()
-ax11 = Axis(fig1[1,1],xlabel="Dχ",ylabel="e_L2",title="L2 Convergence",xscale=log10,yscale=log10)
-#lines!(ax11,Dχs[1:end-1],error_phi_L2_max,label="phi")
+ax11 = Axis(fig1[1,1],xlabel="Dχ",ylabel="e_L2",title="L2 Convergence"*suffix,xscale=log10,yscale=log10)
+lines!(ax11,Dχs[1:end-1],error_phi_L2_max,label="phi")
 lines!(ax11,Dχs[1:end-1],error_eta_L2_max,label="eta")
-ax12 = Axis(fig1[1,2],xlabel="Dχ",ylabel="e_max",title="max Convergence",xscale=log10,yscale=log10)
-#lines!(ax12,Dχs[1:end-1],error_phi_max_max,label="phi")
+axislegend(ax11,position=:lt)
+ax12 = Axis(fig1[1,2],xlabel="Dχ",ylabel="e_max",title="max Convergence"*suffix,xscale=log10,yscale=log10)
+lines!(ax12,Dχs[1:end-1],error_phi_max_max,label="phi")
 lines!(ax12,Dχs[1:end-1],error_eta_max_max,label="eta")
+axislegend(ax12,position=:lt)
 fig1
