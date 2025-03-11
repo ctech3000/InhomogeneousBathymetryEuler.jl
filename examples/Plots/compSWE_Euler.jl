@@ -1,4 +1,4 @@
-using InhomogeneousBathymetryEuler, JLD2, HDF5, DelimitedFiles, Interpolations
+using InhomogeneousBathymetryEuler, JLD2, HDF5, DelimitedFiles, Interpolations, CairoMakie
 
 function linToCart(i_lin::Integer,N::Integer,M::Integer)
     A = zeros(N,M)
@@ -9,7 +9,7 @@ done_once = false
 if !done_once
     #read swe data
     M = 100
-    fid = h5open("examples/Plots/sim_data_Heat_meanBathy_ExactRamp_T=20_M=$(M).hdf5", "r")
+    fid = h5open("examples/Plots/nobathyHeat_mean_kappa2e-01_T=20_M=100.hdf5", "r")
     eta_sensor234_SWE = read(fid,"H_sensor")[:,1:15001].-0.3
     eta_sensor1_SWE = read(fid,"h")[1,1:15001].-0.3
     eta_sensor_SWE = vcat(eta_sensor1_SWE',eta_sensor234_SWE)
@@ -35,13 +35,15 @@ if !done_once
     sensors_reg = d["sensors_reg"]
     sensors_irreg = d["sensors_irreg"]
     time_vec = d["time_vec"]
+    wave_reg = d["wave_reg"]
+    wave_irreg = d["wave_irreg"]
     eta_sensor_euler_reg = [sensors_reg.data[sensor_idx][euler_time_ind] for sensor_idx = 1:4]
     eta_sensor_euler_irreg = [sensors_irreg.data[sensor_idx][euler_time_ind] for sensor_idx = 1:4]
     time_vec = time_vec[euler_time_ind]
 
     #compute analytic TrueSolution
-    eta_wave_reg = [[-1/GRAV*analyticPotential_dt(sensors.sensors_pos_x[sensor],0.0,t,0.3,wave_reg) for t in time_vec] for sensor = 1:4]
-    eta_wave_irreg = [[-1/GRAV*analyticPotential_dt(sensors.sensors_pos_x[sensor],0.0,t,0.3,wave_irreg) for t in time_vec] for sensor = 1:4]
+    eta_wave_reg = [[-1/GRAV*analyticPotential_dt(sensors_reg.sensors_pos_x[sensor],0.0,t,0.3,wave_reg) for t in time_vec] for sensor = 1:4]
+    eta_wave_irreg = [[-1/GRAV*analyticPotential_dt(sensors_irreg.sensors_pos_x[sensor],0.0,t,0.3,wave_irreg) for t in time_vec] for sensor = 1:4]
     done_once = true
 end
 
@@ -76,7 +78,7 @@ end
 Label(fig3[begin-1,1:2], "Comparison num. Euler, reg./SWE", font = "Nimbus Sans Bold")
 fig3
 
-fig4 = Figure()
+fig4 = Figure(size=(1280,720))
 axs4 = [Axis(fig4[linToCart(i,2,2)...],xlabel="t", ylabel="η",title="Sensor $(i)") for i = 1:4]
 for i =1:4
     lines!(axs4[i],time_vec,eta_sensor_real_interp[i].(time_vec),label="measurement")
@@ -84,5 +86,5 @@ for i =1:4
     lines!(axs4[i],time_vec,eta_sensor_euler_irreg[i],label="eta_num_irreg")
     axislegend(axs4[i],position=:lb)
 end
-Label(fig4[begin-1,1:2], "Comparison num. Euler,irreg./SWE", font = "Nimbus Sans Bold")
+Label(fig4[begin-1,1:2], "Comparison num. Euler,irreg./SWE, without bath", font = "Nimbus Sans Bold")
 fig4
