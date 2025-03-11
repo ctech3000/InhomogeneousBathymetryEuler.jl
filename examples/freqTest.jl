@@ -34,6 +34,14 @@ input[type*="range"] {
 </style>
 """
 
+# ╔═╡ 1834c732-00e8-4cbf-9869-7853f9174af3
+md"""
+Select with or without bathymetry.
+"""
+
+# ╔═╡ 58d9e3eb-2187-4eee-8ea1-457429b38fda
+@bind bath Select(["with bathymetry", "without bathymetry"])
+
 # ╔═╡ cad908ae-1fa3-4a04-ae91-282d34ef4562
 md"""
 Select number of heats to be averaged.
@@ -47,7 +55,11 @@ begin
 	eta = zeros(Float64,10000)
 	time_sensor = zeros(Float64,10000)
 	for heat_idx = 1:nHeats
-		filename = "Data_Sensors/Without_Bathymetry/Heat$(heat_idx).txt"
+		if bath == "with bathymetry"
+			filename = "Data_Sensors/With_Bathymetry/Heat$(heat_idx).txt"
+		else
+			filename = "Data_Sensors/Without_Bathymetry/Heat$(heat_idx).txt"
+		end
 		sensor = 1
 		sensor_pos = [0.0,2.0,4.0,6.0]
 		x = sensor_pos[sensor]
@@ -159,7 +171,7 @@ begin
 end
 
 # ╔═╡ 3ac0bd7a-0248-4e18-b64e-32ec0d9c7404
-save_data = false
+save_data = true
 
 # ╔═╡ 7529d603-1211-464c-903c-e45ffccc6c2f
 if save_data
@@ -167,7 +179,11 @@ if save_data
 	amp_save = filtered_amps
 	phase_save = phases
 	time_save = shifted_time
-	jldsave("sensorFreqsWith0.jld2";amp_save,freq_save,phase_save,time_save)
+	if bath == "with bathymetry"
+		jldsave("irregWaveData_withBathy.jld2";amp_save,freq_save,phase_save,time_save)
+	else
+		jldsave("irregWaveData_noBathy.jld2";amp_save,freq_save,phase_save,time_save)
+	end
 end
 
 # ╔═╡ b0da79bb-7572-4ca1-a84e-d26a1c056b94
@@ -208,6 +224,8 @@ end
 # ╟─ac91d146-a4d4-44a7-ace7-fdb770f0b367
 # ╟─7e8dab8d-fc6e-4a67-8ba1-87e48955b627
 # ╟─2deecc02-48f9-46d3-8ac2-fba747562cbb
+# ╟─1834c732-00e8-4cbf-9869-7853f9174af3
+# ╟─58d9e3eb-2187-4eee-8ea1-457429b38fda
 # ╟─cad908ae-1fa3-4a04-ae91-282d34ef4562
 # ╟─902d2a0a-cd9c-4f56-a04e-3c155fcea3e4
 # ╟─26daba59-0f1d-4dbe-8e70-1cc78ddb2f5e
