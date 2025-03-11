@@ -56,12 +56,12 @@ for i = eachindex(nχs)
 
 
     K, K_init, M_T0, M_T1, M_T2, LHS_matrix, LHS_matrix_init, ch = init_K_M(cellvalues, facetvalues, dh,domain,B_domain, B_tilde_domain, D_domain, D_inflow_boundary, D_surface_boundary, trans, outflow, timeMethod, time_vec, nσ);
-    all_etas = solve_all_timesteps(LHS_matrix, LHS_matrix_init, M_T0, M_T1, domain, trans, χs, σs, time_vec, timeMethod, facetvalues, dh, ch, outflow, D_inflow_boundary, save_phi=false);
-    #etas[i] = all_etas
-    #phis[i] = all_phis
+    all_etas, all_phis = solve_all_timesteps(LHS_matrix, LHS_matrix_init, M_T0, M_T1, domain, trans, χs, σs, time_vec, timeMethod, facetvalues, dh, ch, outflow, D_inflow_boundary, save_phi=true);
+    etas[i] = all_etas
+    phis[i] = all_phis
 end
 
 
 wave = SimpleWave()
 
-jldsave("dampingLayerDataIrregEuler.jld2";etas,Dχs,Dσs,Dts,domains,baths,wave,transs)
+jldsave("dampingLayerDataIrregEuler.jld2";etas,phis,Dχs,Dσs,Dts,domains,baths,wave,transs)

@@ -40,7 +40,7 @@ Select number of heats to be averaged.
 """
 
 # ╔═╡ 902d2a0a-cd9c-4f56-a04e-3c155fcea3e4
-@bind nHeats PlutoUI.Slider(1:20,default = 1,show_value=true)
+@bind nHeats PlutoUI.Slider(1:20,default = 20,show_value=true)
 
 # ╔═╡ 26daba59-0f1d-4dbe-8e70-1cc78ddb2f5e
 begin
