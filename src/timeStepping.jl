@@ -110,9 +110,12 @@ function solve_all_timesteps(LHS_matrix::SparseMatrixCSC, LHS_matrix_init::Spars
             end
         else
             if round(t_idx/skip_t) == t_idx/skip_t
-                phi_nodes = evaluate_at_grid_nodes(dh,phi_new,:phi)
+                phi_nodes_mat = reshape(evaluate_at_grid_nodes(dh,phi_new,:phi),(nχ+1,nσ+1))
+                @show size(phi_nodes), nχ, nσ
                 all_phis[round(Integer,t_idx/skip_t)+1] = phi_nodes[1:skip_χ:end,1:skip_σ:end]
                 all_etas[round(Integer,t_idx/skip_t)+1] = eta_new[1:skip_χ:end]
+                @show round(Integer,t_idx/skip_t)+1
+                @show size(all_phis[round(Integer,t_idx/skip_t)+1])
             end
         end
 

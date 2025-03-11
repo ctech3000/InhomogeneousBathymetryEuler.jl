@@ -54,8 +54,8 @@ function IrregWave(amps::Vector{T},freqs::Vector{T},phases::Vector{T};hasFadeIn:
     
     waveList = Vector{SimpleWave}(undef,nComponents)
     for i = 1:nComponents
-        if computeWaveNumber(freqs[i],1.0) > k_cutoff
-            print("Warning in IrregWave: Cut after $(i) components due to high wavenumber (k=$(computeWaveNumber(freqs[i],1.0)))!\n")
+        if computeWavenumber(freqs[i],1.0) > k_cutoff
+            print("Warning in IrregWave: Cut after $(i) components due to high wavenumber (k=$(computeWavenumber(freqs[i],1.0)))!\n")
             return IrregWave(waveList[1:i-1],length(1:i-1),dom_amp,dom_freq,fadeIn,hasFadeIn)
         end
         waveList[i] = SimpleWave(amps[i],freqs[i],phases[i],hasFadeIn=false)
@@ -177,7 +177,7 @@ function DampedDomainProperties(x_L::Float64, x_D::Float64, x_R::Float64, bath::
     b_L = eval_bath(bath,x_L)
     L = x_R - x_D
     freq = getFreq(wave)
-    λ = 2*pi/computeWaveNumber(freq,b_L)
+    λ = 2*pi/computeWavenumber(freq,b_L)
     μ₀ = -GRAV*log(0.5*10^-5)/(2*freq*L)*sqrt(λ/GRAV)
     μ_D(x) = x<x_D ? 0.0 : μ₀*sqrt(GRAV/λ)*(-2*((x-x_D)/L)^3 + 3*((x-x_D)/L)^2)
     #μ_D(x) = x<x_D ? 0.0 : Float64(freq*((x-x_D)/(x_R-x_D))^2)

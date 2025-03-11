@@ -9,7 +9,7 @@ include("transformations.jl") =#
     =#
 const global GRAV = 9.81
 
-function computeWaveNumber(freq::Real,h::Real)
+function computeWavenumber(freq::Real,h::Real)
     k = 1
     for i = 1:1000
         k = freq^2/(GRAV*tanh(k*h))
@@ -17,8 +17,8 @@ function computeWaveNumber(freq::Real,h::Real)
     return k
 end
 
-function computeWaveNumber(wave::AbstractWave)
-    return computeWaveNumber(getFreq(wave),h)
+function computeWavenumber(wave::AbstractWave)
+    return computeWavenumber(getFreq(wave),h)
 end
 
 function analyticPotential(x::Real, z::Real, t::Real, h::Real, wave::SimpleWave)
@@ -28,8 +28,7 @@ function analyticPotential(x::Real, z::Real, t::Real, h::Real, wave::SimpleWave)
     end
     freq = getFreq(wave)
     phase = wave.phase
-    k = computeWaveNumber(freq,h)
-    @show GRAV*amp/freq*cosh(k*(z+h))/cosh(k*h)*sin(k*x - freq*t - phase), k
+    k = computeWavenumber(freq,h)
     return GRAV*amp/freq*cosh(k*(z+h))/cosh(k*h)*sin(k*x - freq*t - phase)
 end
 
@@ -55,7 +54,7 @@ function analyticPotential_dx(x::Real, z::Real, t::Real, h::Real, wave::SimpleWa
     end
     freq = wave.freq
     phase = wave.phase
-    k = computeWaveNumber(freq,h)
+    k = computeWavenumber(freq,h)
     return k*GRAV*amp/freq*cosh(k*(z+h))/cosh(k*h)*cos(k*x - freq*t - phase)
 end
 
@@ -81,7 +80,7 @@ function analyticPotential_dz(x::Real, z::Real, t::Real, h::Real, wave::SimpleWa
     end
     freq = wave.freq
     phase = wave.phase
-    k = computeWaveNumber(freq,h)
+    k = computeWavenumber(freq,h)
     return k*GRAV*amp/freq*sinh(k*(z+h))/cosh(k*h)*sin(k*x - freq*t - phase)
 end
 
@@ -104,11 +103,11 @@ function analyticPotential_dt(x::Real, z::Real, t::Real, h::Real, wave::SimpleWa
     amp = wave.amp
     freq = wave.freq
     phase = wave.phase
-    k = computeWaveNumber(freq,h)
+    k = computeWavenumber(freq,h)
     pot_dt = -GRAV*amp*cosh(k*(z+h))/cosh(k*h)*cos(k*x - freq*t - phase)
     if wave.hasFadeIn
         tau = 2*pi/freq
-        fadeIn_dt = pi*sin(pi*t/(2*tau))/(4*tau)
+        fadeIn_dt = t < 2*tau ? pi*sin(pi*t/(2*tau))/(4*tau) : 0
         pot = analyticPotential(x,z,t,h,wave)
         return fadeIn_dt*pot + wave.fadeIn(t)*pot_dt
     else
@@ -117,13 +116,13 @@ function analyticPotential_dt(x::Real, z::Real, t::Real, h::Real, wave::SimpleWa
 end
 
 function analyticPotential_dt(x::Real, z::Real, t::Real, h::Real, wave::IrregWave)
-    val = 0.0
+    pot_dt = 0.0
     for compWave in wave.waveList
         pot_dt += analyticPotential_dt(x,z,t,h,compWave)
     end
     if wave.hasFadeIn
         tau = 2*pi/getFreq(wave)
-        fadeIn_dt = pi*sin(pi*t/(2*tau))/(4*tau)
+        fadeIn_dt = t < 2*tau ? pi*sin(pi*t/(2*tau))/(4*tau) : 0
         pot = analyticPotential(x,z,t,h,wave)
         return fadeIn_dt*pot + wave.fadeIn(t)*pot_dt
     else
@@ -210,13 +209,13 @@ function transformedAnalyticPotential_dt(χ::Real, σ::Real, t::Real, h::Real, w
 end
 
 function transformedAnalyticPotential_dt(χ::Real, σ::Real, t::Real, h::Real, wave::IrregWave, trans::σTransform)
-    val = 0.0
+    pot_dt = 0.0
     for compWave in wave.waveList
         pot_dt += transformedAnalyticPotential_dt(χ, σ, t, h, compWave, trans)
     end
     if wave.hasFadeIn
         tau = 2*pi/getFreq(wave)
-        fadeIn_dt = pi*sin(pi*t/(2*tau))/(4*tau)
+        fadeIn_dt = t < 2*tau ? pi*sin(pi*t/(2*tau))/(4*tau) : 0
         pot = transformedAnalyticPotential(χ,σ,t,h,wave,trans)
         return fadeIn_dt*pot + wave.fadeIn(t)*pot_dt
     else

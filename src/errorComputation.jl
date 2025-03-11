@@ -1,4 +1,4 @@
-function computeError(u_ana::Matrix{Float64}, u_num::Matrix{Float64}, Dχ::Real;norm::String="L2")
+function computeError(u_ana::Union{Matrix{Float64},Vector{Float64}}, u_num::Union{Matrix{Float64},Vector{Float64}}, Dχ::Real;norm::String="L2")
     if norm == "L2"
         return computeErrorL2(u_ana,u_num, Dχ)
     elseif norm == "max"
@@ -13,5 +13,13 @@ function computeErrorL2(u_ana::Matrix{Float64}, u_num::Matrix{Float64}, Dχ::Rea
 end
 
 function computeErrorMax(u_ana::Matrix{Float64}, u_num::Matrix{Float64})
+    return maximum(abs.(u_ana - u_num))
+end
+
+function computeErrorL2(u_ana::Vector{Float64}, u_num::Vector{Float64}, Dχ::Real)
+    return sqrt.(sum((u_ana - u_num).^2)*Dχ)
+end
+
+function computeErrorMax(u_ana::Vector{Float64}, u_num::Vector{Float64})
     return maximum(abs.(u_ana - u_num))
 end

@@ -90,11 +90,6 @@ md"""
 Sensor input into Simulation:
 """
 
-# ╔═╡ 1ecbc240-6615-4249-8032-f569f1fb8524
-begin 
-	lines(selected_time,selected_eta)
-end
-
 # ╔═╡ 5f652052-e23b-409d-8776-074e13a49699
 begin
 	N_t = length(selected_time)-1
@@ -123,6 +118,34 @@ begin
 	filtered_cos_reco = [sum(filtered_amps.*cos.(filtered_omegas*t)) for t in shifted_time]
 end;
 
+# ╔═╡ 4f9c2646-6552-4cfa-9ff8-b8eefba7de86
+begin
+	phases = zeros(size(filtered_amps))
+	wave = IrregWave(filtered_amps[2:end],filtered_omegas[2:end],phases[2:end],hasFadeIn=false)
+	comp_eta = -1/9.81*[analyticPotential_dt(0,0,t,0.3,wave) for t in shifted_time]
+	fig4 = Figure()
+	ax4 = Axis(fig4[1,1])
+	lines!(ax4,shifted_time,selected_eta[1:end-1],label="orig.")
+	lines!(ax4,shifted_time,filtered_cos_reco, label="filtered cos_reco")
+	lines!(ax4,shifted_time,comp_eta,label="comp_eta")
+	axislegend(position = :lt)
+	fig4
+end
+
+# ╔═╡ 4bc4bd94-17c3-4181-a70e-f02f9cad4f02
+begin 
+	using CairoMakie
+	CairoMakie.activate!()
+	set_theme!(fonts = (; regular = "Liberation Serif", bold = "Liberation Serif Bold"))
+	irreg_wave = IrregWave(filtered_amps[2:end],filtered_omegas[2:end],phases[2:end],hasFadeIn=true)
+	irreg_eta = -1/9.81*[analyticPotential_dt(0,0,t,0.3,irreg_wave) for t in shifted_time]
+end;
+
+# ╔═╡ 1ecbc240-6615-4249-8032-f569f1fb8524
+begin 
+	lines(selected_time,selected_eta)
+end
+
 # ╔═╡ 3edc7820-70e5-4128-a472-a7ab7a1c095f
 begin
 	fig3 = Figure(size = (600,900))
@@ -135,20 +158,6 @@ begin
 	fig3
 end
 
-# ╔═╡ 4f9c2646-6552-4cfa-9ff8-b8eefba7de86
-begin
-	phases = zeros(size(filtered_amps))
-	wave = IrregWave(filtered_amps[2:end],filtered_omegas[2:end],phases[2:end],hasFadeIn=false)
-	comp_eta = -1/9.81*[analyticPotential_dt(0,0,t,0.3,wave) for t in shifted_time]
-	fig4 = Figure()
-	ax4 = Axis(fig4[1,1])
-	lines!(ax4,shifted_time,selected_eta[1:end-1],label="orig.")
-	lines!(ax4,shifted_time,filtered_cos_reco, label="filtered cos_reco")
-	lines!(ax4,shifted_time,comp_eta.+amps[1],label="comp_eta")
-	axislegend(position = :lt)
-	fig4
-end
-
 # ╔═╡ 3ac0bd7a-0248-4e18-b64e-32ec0d9c7404
 save_data = false
 
@@ -159,6 +168,40 @@ if save_data
 	phase_save = phases
 	time_save = shifted_time
 	jldsave("sensorFreqsWith0.jld2";amp_save,freq_save,phase_save,time_save)
+end
+
+# ╔═╡ b0da79bb-7572-4ca1-a84e-d26a1c056b94
+begin
+	freqs = 0:0.1:10
+	h = 0.3
+	ks = computeWavenumber.(freqs,(h,))
+	lambdas = 2*pi ./ks
+	f3 = Figure()
+	ax = Axis(f3[1,1], yticks=WilkinsonTicks(6,k_min=5))
+	lines(freqs,lambdas)
+	lines!(filtered_omegas,filtered_amps*30/0.002)
+	current_figure()
+end
+
+# ╔═╡ dcdb49a6-707b-4d71-9cac-a8c0269eaff4
+@bind phase_reg PlutoUI.Slider(0:0.01:2*pi,show_value=true)
+
+# ╔═╡ 165e7b0b-0131-4446-8835-c5babf5c6c18
+begin
+	reg_wave = SimpleWave(0.005,2.199114857512855,phase_reg)
+	reg_eta = -1/9.81*[analyticPotential_dt(0,0,t,0.3,reg_wave) for t in shifted_time]
+end
+
+# ╔═╡ aa17f115-1e0f-4574-b819-ddd29cf3575d
+begin
+	fig5 = Figure(size=(500,400))
+	ax5 = Axis(fig5[1,1], xlabel= "t (s)",ylabel="η (m)")
+	lines!(ax5,shifted_time,selected_eta[1:end-1],label="measurement")
+	lines!(ax5,shifted_time,reg_eta,label="regular wave")
+	lines!(ax5,shifted_time,irreg_eta,label="irregular wave")
+	axislegend(position = :lt)
+	save("C:/Users/chris/Desktop/Masterarbeit/Text/masterthesis/clean-math-thesis/images/incomingWaves.svg",fig5)
+	fig5
 end
 
 # ╔═╡ Cell order:
@@ -180,6 +223,11 @@ end
 # ╟─3c85ca95-00a7-4307-ae5f-9c6f9833d2f9
 # ╠═d4cb9ea5-7b1e-47d6-ba81-d434c4624727
 # ╟─3edc7820-70e5-4128-a472-a7ab7a1c095f
-# ╟─4f9c2646-6552-4cfa-9ff8-b8eefba7de86
+# ╠═4f9c2646-6552-4cfa-9ff8-b8eefba7de86
 # ╠═3ac0bd7a-0248-4e18-b64e-32ec0d9c7404
 # ╠═7529d603-1211-464c-903c-e45ffccc6c2f
+# ╟─b0da79bb-7572-4ca1-a84e-d26a1c056b94
+# ╠═4bc4bd94-17c3-4181-a70e-f02f9cad4f02
+# ╠═dcdb49a6-707b-4d71-9cac-a8c0269eaff4
+# ╠═165e7b0b-0131-4446-8835-c5babf5c6c18
+# ╠═aa17f115-1e0f-4574-b819-ddd29cf3575d
