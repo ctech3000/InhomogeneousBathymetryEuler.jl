@@ -1,12 +1,12 @@
 using InhomogeneousBathymetryEuler, GLMakie, JLD2
 
-inhom = false
+inhom = true
 true_eta_ana = false
 
-#= if inhom
+if inhom
     filename = "examples/Plots/convergenceDataRegEulerInhom.jld2"
 else
-    filename = "convergenceDataRegEuler.jld2"
+    filename = "examples/Plots/convergenceDataRegEuler.jld2"
 end
 d = load(filename)
 
@@ -26,7 +26,7 @@ nt = length(time_vec)
 Dχ = Dχs[1]
 relevant_χs = 100:201
 relevant_ts = 90:100
-eta_ana = [-1/GRAV*transformedAnalyticPotential_dt(χs,0*χs,t,0.3,wave,trans) for t in time_vec] =#
+eta_ana = [-1/GRAV*transformedAnalyticPotential_dt(χs,0*χs,t,0.3,wave,trans) for t in time_vec]
 
 # compute errors L2 in space
 error_phi_L2_time = Vector{Vector{Float64}}(undef,nDiscs-1)
