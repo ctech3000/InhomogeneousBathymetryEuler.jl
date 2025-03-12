@@ -62,6 +62,6 @@ for i = eachindex(nχs)
 end
 
 
-wave = SimpleWave()
+wave,_,_ = IrregWave("examples/irregWaveData_noBathy.jld2")
 
 jldsave("dampingLayerDataIrregEuler.jld2";etas,phis,Dχs,Dσs,Dts,domains,baths,wave,transs)

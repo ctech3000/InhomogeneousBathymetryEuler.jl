@@ -47,9 +47,20 @@ if !done_once
     time_vec_fine = d_fine["time_vec"]
     wave_reg_fine = d_fine["wave_reg"]
     wave_irreg_fine = d_fine["wave_irreg"]
-    eta_sensor_euler_reg_fine = [sensors_reg_fine.data[sensor_idx][euler_time_ind] for sensor_idx = 1:4]
+    eta_sensor_euler_reg_fine = [sensors_reg_fine.data[sensor_idx][euler_time_ind_fine] for sensor_idx = 1:4]
     eta_sensor_euler_irreg_fine = [sensors_irreg_fine.data[sensor_idx][euler_time_ind_fine] for sensor_idx = 1:4]
     time_vec_fine = time_vec_fine[euler_time_ind_fine]
+    #finest
+    euler_time_ind_finest = 1:1201
+    d_finest = JLD2.load("examples/Plots/compSolDataInhomFinest.jld2")
+    sensors_reg_finest = d_finest["sensors_reg"]
+    sensors_irreg_finest = d_finest["sensors_irreg"]
+    time_vec_finest = d_finest["time_vec"]
+    wave_reg_finest = d_finest["wave_reg"]
+    wave_irreg_finest = d_finest["wave_irreg"]
+    eta_sensor_euler_reg_finest = [sensors_reg_finest.data[sensor_idx][euler_time_ind_finest] for sensor_idx = 1:4]
+    eta_sensor_euler_irreg_finest = [sensors_irreg_finest.data[sensor_idx][euler_time_ind_finest] for sensor_idx = 1:4]
+    time_vec_finest = time_vec_finest[euler_time_ind_finest]
 
     #compute analytic TrueSolution
     eta_wave_reg = [[-1/GRAV*analyticPotential_dt(sensors_reg.sensors_pos_x[sensor],0.0,t,0.3,wave_reg) for t in time_vec] for sensor = 1:4]
@@ -95,6 +106,7 @@ for i =1:4
     lines!(axs4[i],time_SWE,eta_sensor_SWE[i,:],label="eta_SWE")
     lines!(axs4[i],time_vec,eta_sensor_euler_irreg[i],label="Euler, coarse")
     lines!(axs4[i],time_vec_fine,eta_sensor_euler_irreg_fine[i],label="Euler, fine")
+    lines!(axs4[i],time_vec_finest,eta_sensor_euler_irreg_finest[i],label="Euler, finest")
     axislegend(axs4[i],position=:lb)
 end
 Label(fig4[begin-1,1:2], "Comparison num. Euler,irreg./SWE, with bath", font = "Nimbus Sans Bold")

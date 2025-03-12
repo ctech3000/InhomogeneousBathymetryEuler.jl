@@ -12,7 +12,7 @@ nt = 800
 nHeats = length(nχs)
 
 etas = Vector{Vector{Vector{Float64}}}(undef,nHeats)
-phis = Vector{Vector{Vector{Float64}}}(undef,nHeats)
+phis = Vector{Vector{Matrix{Float64}}}(undef,nHeats)
 baths = Vector{Bathymetry}(undef,nHeats)
 domains = Vector{DampedDomainProperties}(undef,nHeats)
 transs = Vector{σTransform}(undef,nHeats)
