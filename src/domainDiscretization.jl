@@ -39,7 +39,7 @@ end
 function discretizeTransformedDomain(domain::AbstractDomain, trans::σTransform; nχ::Int=-1, nσ::Int=-1)
     σ_max = 1.0
     σ_min = 0.0
-    χ_max = 0.0
+    χ_max = trans.χ(getLeftBound(domain))
     χ_min = trans.χ(domain.x_R)
     if nσ < 0
         if nχ < 0
@@ -54,9 +54,9 @@ function discretizeTransformedDomain(domain::AbstractDomain, trans::σTransform;
             nχ = max(round(Int,abs(χ_max - χ_min)*nσ/abs(σ_max-σ_min)),1)
         end
     end
-    χ_lims = Ferrite.Vec(χ_min,χ_max)
-    σ_lims = Ferrite.Vec(σ_min,σ_max)
-    grid = generate_grid(Quadrilateral,(nχ,nσ),χ_lims,σ_lims)
+    left = Ferrite.Vec(χ_min,σ_min)
+    right = Ferrite.Vec(χ_max,σ_max)
+    grid = generate_grid(Quadrilateral,(nχ,nσ),left,right)
     χs = [point[1] for point in get_boundary_coordinates(grid,"top")]
     σs = [point[2] for point in get_boundary_coordinates(grid,"right")]
     Dχ = χs[2] - χs[1]

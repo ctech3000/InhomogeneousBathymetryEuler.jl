@@ -1,7 +1,7 @@
 using InhomogeneousBathymetryEuler 
 using Ferrite
 
-
+x_RX = -10.0
 x_L = 0.0
 x_D = 10.0
 x_R = 20.0
@@ -12,15 +12,16 @@ nσ = 24
 timeMethod = BackwardDiff()
 outflow = OutflowBC("Neumann")
 bathPoints = collect(LinRange(x_L,x_R,nχ+1))
-bathVals = -0.3*ones(Float64,nχ+1)
-bath = Bathymetry(bathPoints,bathVals)
+#bathVals = -0.3*ones(Float64,nχ+1)
+#bath = Bathymetry(bathPoints,bathVals)
 #bath = Bathymetry(bathPoints,"Gauss",shift=5)
-#bath = Bathymetry(bathPoints,"Ramp",rampStart=4,rampEnd=6,rampHeightStart=-0.3,rampHeightEnd=-0.1)
+bath = Bathymetry(bathPoints,"Ramp",rampStart=4,rampEnd=6,rampHeightStart=-0.3,rampHeightEnd=-0.1)
 #wave = SimpleWave()     #λ=4.78
 #wave, wave_time = IrregWave("examples/sensorFreqs.jld2")
 wave = IrregWave([0.005,0.005],[-2.199114857512855,2.199114857512855],[2.5,2.5])
 #domain = DomainProperties(x_L,x_D,bath,wave)
 domain = DampedDomainProperties(x_L,x_D,x_R,bath,wave)
+#domain = RelaxedDampedDomainProperties(x_RX,x_L,x_D,x_R,bath,wave)
 trans = σTransform(domain)
 sensors = Sensors(domain,trans,time_vec)
 grid, χs, σs, Dχ, Dσ, nχ, nσ = discretizeTransformedDomain(domain, trans, nχ=nχ)

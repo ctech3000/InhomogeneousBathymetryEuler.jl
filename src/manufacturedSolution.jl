@@ -114,6 +114,40 @@ function assemble_h_element!(he::Vector, facetvalues::FacetValues, facet::FacetC
     end
 end
 
+function assemble_l_global(facetvalues::FacetValues, dh::DofHandler, domain::AbstractDomain, trans::σTransform, u::TrueSolution)
+    n_basefuncs = getnbasefunctions(facetvalues)
+    he = zeros(n_basefuncs)
+    h = zeros(ndofs(dh))
+    for (facet_idx, facet) in enumerate(FacetIterator(dh, getfacetset(dh.grid, "top")))
+        reinit!(facetvalues, facet)
+        assemble_l_element!(he, facetvalues, facet, domain, trans, u)
+        insert_into_f!(h, he, facetvalues, facet)
+    end
+    return h
+end
+
+function assemble_l_element!(he::Vector, facetvalues::FacetValues, facet::FacetCache, domain::AbstractDomain, trans::σTransform, u::TrueSolution)
+    n_basefuncs = getnbasefunctions(facetvalues)
+    fill!(he, 0)
+    node_coords = getcoordinates(facet)
+    n_q_points = getnquadpoints(facetvalues)
+
+    for q_point in 1:n_q_points
+        dS = getdetJdV(facetvalues, q_point)
+        q_point_coords = spatial_coordinate(facetvalues, q_point, node_coords)
+        D_point = abs(trans.tBath.vals[end])
+        x = trans.x(q_point_coords[1])
+        z = trans.z(q_point_coords...)
+        normal = computeBathNormal(x,domain)
+        l_point = u.u_0_dx(x,z)*normal[1] + u.u_0_dz(x,z)*normal[2]
+        for i in 1:n_basefuncs
+            Ni = shape_value(facetvalues, q_point, i)
+            he[i] += (Ni * l_point * D_point) * dS
+        end
+    end
+end
+
+
 # https://github.com/Ferrite-FEM/Ferrite.jl/discussions/788
 function vertexdofs(dh::DofHandler, vertexid::VertexIndex)
 
@@ -267,4 +301,11 @@ function assemble_manufactured_global(cellvalues::CellValues, facetvalues::Facet
         assemble!(assembler, celldofs(cell), Ke, RHSe)
     end
     return K, RHS
+end
+
+function computeBathNormal(x::Real, domain::AbstractDomain)
+    b_prime = eval_bath(domain.bath,x,1)
+    n1 = 1/sqrt(1+b_prime^2)*b_prime
+    n2 = -1/sqrt(1+b_prime^2)
+    return [n1,n2]
 end

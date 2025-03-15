@@ -158,8 +158,36 @@ struct DomainProperties <: AbstractDomain
     wave::AbstractWave
 end
 
+function printDomainSize(x_L::Real,x_R::Real,b_L::Real,wave::AbstractWave)
+    lam = 2*pi/computeWavenumber(wave,-b_L)
+    physLength = (x_R - x_L)
+    physLam = (x_R - x_L)/lam
+    print("Domain width is:  Physical: $(round(physLam,digits=2))λ ($(round(physLength,digits=2))m)\n")
+end
+
+function printDomainSize(x_L::Real,x_D::Real,x_R::Real,b_L::Real,wave::AbstractWave)
+    lam = 2*pi/computeWavenumber(wave,-b_L)
+    physLength = (x_D - x_L)
+    physLam = (x_D - x_L)/lam
+    dampingLength = (x_R - x_D)
+    dampingLam = (x_R - x_D)/lam
+    print("Domain width is:  Physical: $(round(physLam,digits=2))λ ($(round(physLength,digits=2))m),  Damping Layer: $(round(dampingLam,digits=2))λ ($(round(dampingLength,digits=2))m)\n")
+end
+
+function printDomainSize(x_RX::Real,x_L::Real,x_D::Real,x_R::Real,b_L::Real,wave::AbstractWave)
+    lam = 2*pi/computeWavenumber(wave,-b_L)
+    physLength = (x_D - x_L)
+    physLam = (x_D - x_L)/lam
+    dampingLength = (x_R - x_D)
+    dampingLam = (x_R - x_D)/lam
+    relaxationLength = x_L - x_RX
+    relaxationLam = (x_L - x_RX)/lam
+    print("Domain width is:  Physical: $(round(physLam,digits=2))λ ($(round(physLength,digits=2))m),  Damping Layer: $(round(dampingLam,digits=2))λ ($(round(dampingLength,digits=2))m), Relaxation Layer: $(round(relaxationLam,digits=2))λ ($(round(relaxationLength,digits=2))m)\n")
+end
+
 function DomainProperties(x_L::Real, x_R::Real, bath::Bathymetry, wave::AbstractWave)
     b_L = eval_bath(bath,x_L)
+    printDomainSize(x_L,x_R,b_L,wave)
     return DomainProperties(x_L,x_R,bath,b_L,wave)
 end
 
@@ -173,7 +201,7 @@ struct DampedDomainProperties <: AbstractDomain
     μ_D::Function
 end
 
-function DampedDomainProperties(x_L::Float64, x_D::Float64, x_R::Float64, bath::Bathymetry, wave::AbstractWave)
+function computeDampingFunction(x_L::Real, x_D::Real, x_R::Real, wave::AbstractWave,bath::Bathymetry)
     b_L = eval_bath(bath,x_L)
     L = x_R - x_D
     freq = getFreq(wave)
@@ -181,7 +209,44 @@ function DampedDomainProperties(x_L::Float64, x_D::Float64, x_R::Float64, bath::
     μ₀ = -GRAV*log(0.5*10^-5)/(2*freq*L)*sqrt(λ/GRAV)
     μ_D(x) = x<x_D ? 0.0 : μ₀*sqrt(GRAV/λ)*(-2*((x-x_D)/L)^3 + 3*((x-x_D)/L)^2)
     #μ_D(x) = x<x_D ? 0.0 : Float64(freq*((x-x_D)/(x_R-x_D))^2)
+    return μ_D
+end
+
+function DampedDomainProperties(x_L::Float64, x_D::Float64, x_R::Float64, bath::Bathymetry, wave::AbstractWave)
+    b_L = eval_bath(bath,x_L)
+    μ_D = computeDampingFunction(x_L,x_D,x_R,wave,bath)
+    printDomainSize(x_L,x_D,x_R,b_L,wave)
     return DampedDomainProperties(x_L,x_D,x_R,bath,b_L,wave,μ_D)
+end
+
+struct RelaxedDampedDomainProperties <: AbstractDomain
+    x_RX::Float64
+    x_L::Float64
+    x_D::Float64
+    x_R::Float64
+    bath::Bathymetry
+    b_L::Float64
+    wave::AbstractWave
+    μ_D::Function
+end
+
+function RelaxedDampedDomainProperties(x_RX::Float64, x_L::Float64, x_D::Float64, x_R::Float64, bath::Bathymetry, wave::AbstractWave)
+    if x_RX >= 0
+        print("Error in RelaxedDampedDomainProperties: x_RX must be negative!\n")
+        return
+    end
+    b_L = eval_bath(bath,x_L)
+    μ_D = computeDampingFunction(x_L,x_D,x_R,wave,bath)
+    printDomainSize(x_RX,x_L,x_D,x_R,b_L,wave)
+    return RelaxedDampedDomainProperties(x_RX,x_L,x_D,x_R,bath,b_L,wave,μ_D)
+end
+
+function getLeftBound(domain::Union{DomainProperties,DampedDomainProperties})
+    return domain.x_L
+end
+
+function getLeftBound(domain::RelaxedDampedDomainProperties)
+    return domain.x_RX
 end
 
 
