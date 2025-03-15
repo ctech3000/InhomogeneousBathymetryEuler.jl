@@ -5,20 +5,21 @@ using Ferrite
 x_L = 0.0
 x_D = 10.0
 x_R = 20.0
-time_vec = collect(0:0.05:20)
-nχ = 800
-nσ = 12
+time_vec = collect(0:0.01:50)
+nχ = 1600
+nσ = 24
 
 timeMethod = BackwardDiff()
-outflow = OutflowBC("Dirichlet")
+outflow = OutflowBC("Neumann")
 bathPoints = collect(LinRange(x_L,x_R,nχ+1))
 bathVals = -0.3*ones(Float64,nχ+1)
 bath = Bathymetry(bathPoints,bathVals)
 #bath = Bathymetry(bathPoints,"Gauss",shift=5)
 #bath = Bathymetry(bathPoints,"Ramp",rampStart=4,rampEnd=6,rampHeightStart=-0.3,rampHeightEnd=-0.1)
 #wave = SimpleWave()     #λ=4.78
-wave, wave_time = IrregWave("examples/sensorFreqs.jld2")
-#domain = DomainProperties(x_L,x_R,bath,wave)
+#wave, wave_time = IrregWave("examples/sensorFreqs.jld2")
+wave = IrregWave([0.005,0.005],[-2.199114857512855,2.199114857512855],[2.5,2.5])
+#domain = DomainProperties(x_L,x_D,bath,wave)
 domain = DampedDomainProperties(x_L,x_D,x_R,bath,wave)
 trans = σTransform(domain)
 sensors = Sensors(domain,trans,time_vec)

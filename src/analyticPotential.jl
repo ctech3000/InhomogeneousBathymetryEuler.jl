@@ -17,7 +17,7 @@ function computeWavenumber(freq::Real,h::Real)
     return k
 end
 
-function computeWavenumber(wave::AbstractWave)
+function computeWavenumber(wave::AbstractWave,h::Real)
     return computeWavenumber(getFreq(wave),h)
 end
 

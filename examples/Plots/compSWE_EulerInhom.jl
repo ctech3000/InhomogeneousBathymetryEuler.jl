@@ -39,7 +39,7 @@ if !done_once
     eta_sensor_euler_reg = [sensors_reg.data[sensor_idx][euler_time_ind] for sensor_idx = 1:4]
     eta_sensor_euler_irreg = [sensors_irreg.data[sensor_idx][euler_time_ind] for sensor_idx = 1:4]
     time_vec = time_vec[euler_time_ind]
-    #finer
+    #= #finer
     euler_time_ind_fine = 1:601
     d_fine = JLD2.load("examples/Plots/compSolDataInhomFine.jld2")
     sensors_reg_fine = d_fine["sensors_reg"]
@@ -60,7 +60,19 @@ if !done_once
     wave_irreg_finest = d_finest["wave_irreg"]
     eta_sensor_euler_reg_finest = [sensors_reg_finest.data[sensor_idx][euler_time_ind_finest] for sensor_idx = 1:4]
     eta_sensor_euler_irreg_finest = [sensors_irreg_finest.data[sensor_idx][euler_time_ind_finest] for sensor_idx = 1:4]
-    time_vec_finest = time_vec_finest[euler_time_ind_finest]
+    time_vec_finest = time_vec_finest[euler_time_ind_finest] =#
+
+    #hom signal
+    euler_time_ind_homS = 1:301
+    d_homS = JLD2.load("examples/Plots/compSolDataInhom_HomSignal.jld2")
+    sensors_reg_homS = d["sensors_reg"]
+    sensors_irreg_homS = d["sensors_irreg"]
+    time_vec_homS = d["time_vec"]
+    wave_reg_homS = d["wave_reg"]
+    wave_irreg_homS = d["wave_irreg"]
+    eta_sensor_euler_reg_homS = [sensors_reg_homS.data[sensor_idx][euler_time_ind_homS] for sensor_idx = 1:4]
+    eta_sensor_euler_irreg_homS = [sensors_irreg_homS.data[sensor_idx][euler_time_ind_homS] for sensor_idx = 1:4]
+    time_vec_homS = time_vec[euler_time_ind_homS]
 
     #compute analytic TrueSolution
     eta_wave_reg = [[-1/GRAV*analyticPotential_dt(sensors_reg.sensors_pos_x[sensor],0.0,t,0.3,wave_reg) for t in time_vec] for sensor = 1:4]
@@ -105,8 +117,9 @@ for i =1:4
     lines!(axs4[i],time_vec,eta_sensor_real_interp[i].(time_vec),label="measurement")
     lines!(axs4[i],time_SWE,eta_sensor_SWE[i,:],label="eta_SWE")
     lines!(axs4[i],time_vec,eta_sensor_euler_irreg[i],label="Euler, coarse")
-    lines!(axs4[i],time_vec_fine,eta_sensor_euler_irreg_fine[i],label="Euler, fine")
-    lines!(axs4[i],time_vec_finest,eta_sensor_euler_irreg_finest[i],label="Euler, finest")
+    #lines!(axs4[i],time_vec_fine,eta_sensor_euler_irreg_fine[i],label="Euler, fine")
+    #lines!(axs4[i],time_vec_finest,eta_sensor_euler_irreg_finest[i],label="Euler, finest")
+    lines!(axs4[i],time_vec,eta_sensor_euler_irreg_homS[i],label="Euler, homS")
     axislegend(axs4[i],position=:lb)
 end
 Label(fig4[begin-1,1:2], "Comparison num. Euler,irreg./SWE, with bath", font = "Nimbus Sans Bold")

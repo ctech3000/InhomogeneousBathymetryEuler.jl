@@ -1,19 +1,22 @@
 using InhomogeneousBathymetryEuler 
 using Ferrite, JLD2
 
-
+wave,_,_ = IrregWave("examples/irregWaveData_noBathy.jld2")
+lam = 2*pi/computeWavenumber(wave,0.3)
 x_L = 0.0
-x_D = 10.0
-T = 50
-nχs = 800 .+ [0,200,400,800,1200,1600,4400]
-x_R_diff = [0,2.5,5,10,15,20,55]
-nσ = 24
-nt = 800
+x_D = 3*lam
+#extension = [0,0.25,0.5,1,1.5,2,3,4,12]
+extension = [0,0.25,0.5,1,1.5,2,3,4]
+x_R_diff = lam*extension
+nχs = 1600 .+ round.(Integer,1600/3*extension)
+nt = 1500
+T = 100
 nHeats = length(nχs)
 
 etas = Vector{Vector{Vector{Float64}}}(undef,nHeats)
+phis = Vector{Vector{Matrix{Float64}}}(undef,nHeats)
 baths = Vector{Bathymetry}(undef,nHeats)
-domains = Vector{DampedDomainProperties}(undef,nHeats)
+domains = Vector{AbstractDomain}(undef,nHeats)
 transs = Vector{σTransform}(undef,nHeats)
 Dχs = Vector{Float64}(undef,nHeats)
 Dσs = Vector{Float64}(undef,nHeats)
@@ -23,17 +26,20 @@ for i = eachindex(nχs)
     print("run $(i)/$(nHeats)...\n")
     nχ = nχs[i]
     x_R = x_D + x_R_diff[i]
-    global nσ
-    time_vec = collect(LinRange(0,T,nt))
-    timeMethod = BackwardDiff()
-    outflow = OutflowBC("Dirichlet")
     bathPoints = collect(LinRange(x_L,x_R,nχ+1))
     bathVals = -0.3*ones(Float64,nχ+1)
     bath = Bathymetry(bathPoints,bathVals)
-    wave,_,_ = IrregWave("examples/irregWaveData_noBathy.jld2")
-    domain = DampedDomainProperties(x_L,x_D,x_R,bath,wave)
+    if i == nHeats
+        domain = DomainProperties(x_L,x_R,bath,wave)
+    else
+        domain = DampedDomainProperties(x_L,x_D,x_R,bath,wave)
+    end
+    time_vec = collect(LinRange(0,T,nt))
+    timeMethod = BackwardDiff()
+    outflow = OutflowBC("Dirichlet")
     trans = σTransform(domain)
-    grid, χs, σs, Dχ, Dσ, nχ, nσ = discretizeTransformedDomain(domain, trans, nχ=nχ, nσ=nσ)
+    grid, χs, σs, Dχ, Dσ, nχ, nσ = discretizeTransformedDomain(domain, trans, nχ=nχ)
+    @show Dχ, Dσ, nχ, nσ 
     Dt = (time_vec[end] - time_vec[1])/(length(time_vec)-1)
     Dχs[i] = Dχ
     Dσs[i] = Dσ
@@ -62,6 +68,6 @@ for i = eachindex(nχs)
 end
 
 
-wave,_,_ = IrregWave("examples/irregWaveData_noBathy.jld2")
 
-jldsave("dampingLayerDataIrregEuler.jld2";etas,phis,Dχs,Dσs,Dts,domains,baths,wave,transs)
+
+jldsave("dampingLayerDataIrregEulerFiner.jld2";etas,phis,Dχs,Dσs,Dts,domains,baths,wave,transs)
