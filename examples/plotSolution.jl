@@ -64,5 +64,10 @@ for i =1:4
     lines!(axs3[i],time_vec,sensors.data[i],label="eta_num")
     axislegend(axs3[i],position=:lb)
 end
-Label(f3[begin-1,1:2], "Comparison num. Euler,irreg./SWE, without bath", font = "Nimbus Sans Bold")
+if bathy
+    out = ""
+else
+    out = "out"
+end
+Label(f3[begin-1,1:2], "Comparison num. Euler/Sensor, with"*out*" bathymetry", font = "Nimbus Sans Bold")
 f3
