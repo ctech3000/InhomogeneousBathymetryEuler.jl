@@ -5,21 +5,18 @@ x_RX = -10.0
 x_L = 0.0
 x_D = 10.0
 x_R = 20.0
-time_vec = collect(0:0.01:50)
-nχ = 1600
-nσ = 24
+time_vec = collect(0:0.05:30)
+nχ = 800
+nσ = 23
 
 timeMethod = BackwardDiff()
 outflow = OutflowBC("Neumann")
 bathPoints = collect(LinRange(x_L,x_R,nχ+1))
-#bathVals = -0.3*ones(Float64,nχ+1)
-#bath = Bathymetry(bathPoints,bathVals)
-#bath = Bathymetry(bathPoints,"Gauss",shift=5)
-bath = Bathymetry(bathPoints,"Ramp",rampStart=4,rampEnd=6,rampHeightStart=-0.3,rampHeightEnd=-0.1)
-#wave = SimpleWave()     #λ=4.78
-#wave, wave_time = IrregWave("examples/sensorFreqs.jld2")
-wave = IrregWave([0.005,0.005],[-2.199114857512855,2.199114857512855],[2.5,2.5])
-#domain = DomainProperties(x_L,x_D,bath,wave)
+bath = Bathymetry(bathPoints,-0.3*ones(Float64,nχ+1)) # flat bathy
+#bath = Bathymetry(bathPoints,"Gauss",shift=5) # gauss bathy 
+#bath = Bathymetry(bathPoints,"Ramp",rampStart=4,rampEnd=6,rampHeightStart=-0.3,rampHeightEnd=-0.1) # ramp bathy
+#wave = SimpleWave()     # plane wave λ=4.78
+wave,_,_ = IrregWave("examples/sensorFreqsWith0.jld2") # irreg wave
 domain = DampedDomainProperties(x_L,x_D,x_R,bath,wave)
 #domain = RelaxedDampedDomainProperties(x_RX,x_L,x_D,x_R,bath,wave)
 trans = σTransform(domain)
@@ -37,6 +34,7 @@ dh = DofHandler(grid)
 add!(dh, :phi, ip)
 close!(dh);
 
+### check next
 B_domain, B_tilde_domain, D_domain, D_inflow_boundary, D_surface_boundary = compute_B_D(cellvalues,facetvalues,dh,domain,trans)
 
 
