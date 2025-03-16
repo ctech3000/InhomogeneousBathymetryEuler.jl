@@ -86,7 +86,7 @@ function assemble_Ms_element!(M_T0e::Matrix, M_T1e::Matrix, M_T2e::Matrix, De::V
     node_coords = getcoordinates(facet)
     n_q_points = getnquadpoints(facetvalues)
     q_point_coords = spatial_coordinate.((facetvalues,), collect(1:n_q_points),(node_coords,))
-    if isa(domain,DampedDomainProperties)
+    if isa(domain,Union{RelaxedDampedDomainProperties,DampedDomainProperties})
         μ_D_disc = [domain.μ_D(trans.x(q_point_coords[q_point][1])) for q_point = 1:n_q_points]
     else
         μ_D_disc = zeros(Float64, n_q_points)

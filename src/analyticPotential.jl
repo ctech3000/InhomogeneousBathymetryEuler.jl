@@ -28,7 +28,11 @@ function analyticPotential(x::Real, z::Real, t::Real, h::Real, wave::SimpleWave)
     end
     freq = getFreq(wave)
     phase = wave.phase
-    k = computeWavenumber(freq,h)
+    if isnan(wave.waveNumberAtInflow)
+        k = computeWavenumber(freq,h)
+    else
+        k = wave.waveNumberAtInflow
+    end
     return GRAV*amp/freq*cosh(k*(z+h))/cosh(k*h)*sin(k*x - freq*t - phase)
 end
 
@@ -54,7 +58,11 @@ function analyticPotential_dx(x::Real, z::Real, t::Real, h::Real, wave::SimpleWa
     end
     freq = wave.freq
     phase = wave.phase
-    k = computeWavenumber(freq,h)
+    if isnan(wave.waveNumberAtInflow)
+        k = computeWavenumber(freq,h)
+    else
+        k = wave.waveNumberAtInflow
+    end
     return k*GRAV*amp/freq*cosh(k*(z+h))/cosh(k*h)*cos(k*x - freq*t - phase)
 end
 
@@ -80,7 +88,11 @@ function analyticPotential_dz(x::Real, z::Real, t::Real, h::Real, wave::SimpleWa
     end
     freq = wave.freq
     phase = wave.phase
-    k = computeWavenumber(freq,h)
+    if isnan(wave.waveNumberAtInflow)
+        k = computeWavenumber(freq,h)
+    else
+        k = wave.waveNumberAtInflow
+    end
     return k*GRAV*amp/freq*sinh(k*(z+h))/cosh(k*h)*sin(k*x - freq*t - phase)
 end
 
@@ -103,7 +115,11 @@ function analyticPotential_dt(x::Real, z::Real, t::Real, h::Real, wave::SimpleWa
     amp = wave.amp
     freq = wave.freq
     phase = wave.phase
-    k = computeWavenumber(freq,h)
+    if isnan(wave.waveNumberAtInflow)
+        k = computeWavenumber(freq,h)
+    else
+        k = wave.waveNumberAtInflow
+    end
     pot_dt = -GRAV*amp*cosh(k*(z+h))/cosh(k*h)*cos(k*x - freq*t - phase)
     if wave.hasFadeIn
         tau = 2*pi/freq

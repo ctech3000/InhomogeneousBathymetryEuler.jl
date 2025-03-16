@@ -9,14 +9,15 @@ struct SimpleWave <: AbstractWave
     phase::Real
     fadeIn::Function
     hasFadeIn::Bool
+    waveNumberAtInflow::Real
 end
 
-function SimpleWave(amp::Real,freq::Real,phase::Real;hasFadeIn=true)
+function SimpleWave(amp::Real,freq::Real,phase::Real;hasFadeIn=true,inflowDepth::Real=0.0)
     tau = 2*pi/freq
 
     fadeIn(t) = hasFadeIn ? (t < 2*tau ? 1/2*(1-cos(pi*t/(2*tau))) : 1.0) : 1.0
-    
-    return SimpleWave(amp, freq, phase, fadeIn, hasFadeIn)
+    waveNumberAtInflow = computeWavenumber(freq,inflowDepth)
+    return SimpleWave(amp, freq, phase, fadeIn, hasFadeIn,waveNumberAtInflow)
 end
 
 function SimpleWave() 
@@ -43,7 +44,7 @@ struct IrregWave <: AbstractWave
     hasFadeIn::Bool
 end
 
-function IrregWave(amps::Vector{T},freqs::Vector{T},phases::Vector{T};hasFadeIn::Bool=true,k_cutoff::Real=50.0) where T <: Real
+function IrregWave(amps::Vector{T},freqs::Vector{T},phases::Vector{T};hasFadeIn::Bool=true,k_cutoff::Real=50.0,inflowDepth::Real=0.0) where T <: Real
     nComponents = length(amps)
     dom_ind = argmax(amps)
     dom_freq = freqs[dom_ind]
@@ -58,7 +59,7 @@ function IrregWave(amps::Vector{T},freqs::Vector{T},phases::Vector{T};hasFadeIn:
             print("Warning in IrregWave: Cut after $(i) components due to high wavenumber (k=$(computeWavenumber(freqs[i],1.0)))!\n")
             return IrregWave(waveList[1:i-1],length(1:i-1),dom_amp,dom_freq,fadeIn,hasFadeIn)
         end
-        waveList[i] = SimpleWave(amps[i],freqs[i],phases[i],hasFadeIn=false)
+        waveList[i] = SimpleWave(amps[i],freqs[i],phases[i],hasFadeIn=false,inflowDepth=inflowDepth)
     end
     return IrregWave(waveList,nComponents,dom_amp,dom_freq,fadeIn,hasFadeIn)
 end
@@ -228,6 +229,7 @@ struct RelaxedDampedDomainProperties <: AbstractDomain
     b_L::Float64
     wave::AbstractWave
     μ_D::Function
+    ramp_RX::Function
 end
 
 function RelaxedDampedDomainProperties(x_RX::Float64, x_L::Float64, x_D::Float64, x_R::Float64, bath::Bathymetry, wave::AbstractWave)
@@ -237,8 +239,15 @@ function RelaxedDampedDomainProperties(x_RX::Float64, x_L::Float64, x_D::Float64
     end
     b_L = eval_bath(bath,x_L)
     μ_D = computeDampingFunction(x_L,x_D,x_R,wave,bath)
+    L_RX = x_L - x_RX
+    if L_RX == 0.0
+        print("Error in RelaxedDampedDomainProperties: x_RX cannot equal x_L!\n")
+        return
+    end
+    chi_RX(x) = -x/L_RX 
+    ramp_RX(x) = 1 - (exp(chi_RX(x)^3.5) - 1)/((exp(1) - 1)) 
     printDomainSize(x_RX,x_L,x_D,x_R,b_L,wave)
-    return RelaxedDampedDomainProperties(x_RX,x_L,x_D,x_R,bath,b_L,wave,μ_D)
+    return RelaxedDampedDomainProperties(x_RX,x_L,x_D,x_R,bath,b_L,wave,μ_D,ramp_RX)
 end
 
 function getLeftBound(domain::Union{DomainProperties,DampedDomainProperties})

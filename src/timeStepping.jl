@@ -41,7 +41,47 @@ function compute_new_dirichlet_data(phi_curr::Vector{Float64}, phi_old::Vector{F
     return phi_surface_new
 end
 
-function compute_eta(phi_new::Vector{Float64}, phi_curr::Vector{Float64}, phi_old::Vector{Float64}, domain::DampedDomainProperties, trans::σTransform,Dt::Real,nχ::Int,χs::Vector{Float64}, dh::DofHandler)
+function relaxation_dofs_coords(dh::Ferrite.DofHandler, trans::σTransform, domain::RelaxedDampedDomainProperties; apply_full_relaxation::Bool=false)
+    node_ids = 1:length(dh.grid.nodes)
+    RX_dofs = Int[]
+    RX_coords = Vector{Float64}[]
+    x_RX = domain.x_RX
+    x_L = domain.x_L
+
+    for node_id in node_ids
+        dof_coord = dh.grid.nodes[node_id].x
+        x = trans.x(dof_coord[1])
+        z = trans.z(dof_coord...)
+        if x <= x_L && (abs(z) < 10^-13 || apply_full_relaxation)
+            vertexid = nodeid_to_vertexindex(dh.grid, node_id)
+            dof = vertexdofs(dh, vertexid)[1]
+            push!(RX_dofs,dof)
+            push!(RX_coords,[x,z])
+        end
+    end
+    return RX_dofs, RX_coords
+end
+
+function relaxation_dofs_coords(dh::Ferrite.DofHandler, trans::σTransform, domain::AbstractDomain; apply_full_relaxation::Bool=false)
+    return [0],[[0.0]]
+end
+
+function apply_relaxation(sol_num::Vector{Float64},t::Real,h::Real,RX_dofs::Vector{Int},RX_coords::Vector{Vector{Float64}},wave::AbstractWave,domain::RelaxedDampedDomainProperties)
+    relaxed_sol = deepcopy(sol_num)
+    for (i,dof) in enumerate(RX_dofs)
+        x,z = RX_coords[i]
+        sol_ana = analyticPotential(x,z,t,h,wave)
+        relaxed_sol[dof] = domain.ramp_RX(x)*sol_num[dof] + (1 - domain.ramp_RX(x))*sol_ana
+        #relaxed_sol[dof] = domain.ramp_RX(x)*sol_num[dof] + (1 - domain.ramp_RX(x))*0
+    end
+    return relaxed_sol
+end
+
+function apply_relaxation(sol_num::Vector{Float64},t::Real,h::Real,RX_dofs::Vector{Int},RX_coords::Vector{Vector{Float64}},wave::AbstractWave,domain::AbstractDomain)
+    return sol_num
+end
+
+function compute_eta(phi_new::Vector{Float64}, phi_curr::Vector{Float64}, phi_old::Vector{Float64}, domain::Union{DampedDomainProperties,RelaxedDampedDomainProperties}, trans::σTransform,Dt::Real,nχ::Int,χs::Vector{Float64}, dh::DofHandler)
     phi_nodes_old = evaluate_at_grid_nodes(dh,phi_old,:phi)
     phi_nodes_curr = evaluate_at_grid_nodes(dh,phi_curr,:phi)
     phi_nodes_new = evaluate_at_grid_nodes(dh,phi_new,:phi)
@@ -68,7 +108,7 @@ function compute_eta(phi_new::Vector{Float64}, phi_curr::Vector{Float64}, phi_ol
     return eta_new
 end
 
-function solve_all_timesteps(LHS_matrix::SparseMatrixCSC, LHS_matrix_init::SparseMatrixCSC, M_T0::SparseMatrixCSC, M_T1::SparseMatrixCSC, domain::AbstractDomain, trans::σTransform, χs::Vector{Float64}, σs::Vector{Float64}, time_vec::Vector{Float64}, timeMethod::AbstractTimeSteppingMethod, facetvalues::FacetValues, dh::DofHandler, ch::ConstraintHandler, outflow::OutflowBC, D_inflow_boundary::Vector{Vector{Float64}}; save_phi::Union{Bool,Tuple{Int64, Int64, Int64}}=false)
+function solve_all_timesteps(LHS_matrix::SparseMatrixCSC, LHS_matrix_init::SparseMatrixCSC, M_T0::SparseMatrixCSC, M_T1::SparseMatrixCSC, domain::AbstractDomain, trans::σTransform, χs::Vector{Float64}, σs::Vector{Float64}, time_vec::Vector{Float64}, timeMethod::AbstractTimeSteppingMethod, facetvalues::FacetValues, dh::DofHandler, ch::ConstraintHandler, outflow::OutflowBC, D_inflow_boundary::Vector{Vector{Float64}}; save_phi::Union{Bool,Tuple{Int64, Int64, Int64}}=false, apply_full_relaxation::Bool=false)
     nχ = length(χs) - 1
     nσ = length(σs) - 1
     Dσ = σs[2] - σs[1]
@@ -79,6 +119,9 @@ function solve_all_timesteps(LHS_matrix::SparseMatrixCSC, LHS_matrix_init::Spars
     phi_curr = zeros(Float64, ndofs(dh))  
     all_etas = Vector{Vector{Float64}}(undef,nt)
     all_etas[1] = zeros(Float64,nχ+1)
+    LHS_lu = lu(LHS_matrix)
+    RX_dofs, RX_coords = relaxation_dofs_coords(dh,trans,domain,apply_full_relaxation=apply_full_relaxation)
+
     if save_phi !== false
         if isa(save_phi,Bool)
             all_phis = Vector{Matrix{Float64}}(undef,nt)
@@ -92,7 +135,6 @@ function solve_all_timesteps(LHS_matrix::SparseMatrixCSC, LHS_matrix_init::Spars
         end
     end
         
-    LHS_lu = lu(LHS_matrix)
     for (t_idx,t_p) in ProgressBar(enumerate(time_vec[2:end]))
         g = assemble_g_global(facetvalues,dh,D_inflow_boundary,trans,domain.wave,t_p)
         RHS = compute_RHS(g,M_T0,M_T1,phi_curr,phi_old,phi_oldold,Dt,timeMethod)
@@ -100,6 +142,7 @@ function solve_all_timesteps(LHS_matrix::SparseMatrixCSC, LHS_matrix_init::Spars
             apply_dirichlet!(RHS,LHS_matrix_init,zeros(Float64,nσ+1),ch)
         end
         phi_new = LHS_lu\RHS
+        phi_new = apply_relaxation(phi_new,t_p,-domain.b_L,RX_dofs,RX_coords,domain.wave,domain)
         eta_new = compute_eta(phi_new,phi_curr,phi_old,domain,trans,Dt,nχ,χs,dh)
 
         if isa(save_phi,Bool)
@@ -128,13 +171,13 @@ function solve_all_timesteps(LHS_matrix::SparseMatrixCSC, LHS_matrix_init::Spars
     end
 end;
 
-function solve_all_timesteps!(sensors::Sensors,LHS_matrix::SparseMatrixCSC, LHS_matrix_init::SparseMatrixCSC, M_T0::SparseMatrixCSC, M_T1::SparseMatrixCSC, domain::AbstractDomain, trans::σTransform, χs::Vector{Float64}, σs::Vector{Float64}, time_vec::Vector{Float64}, timeMethod::AbstractTimeSteppingMethod, facetvalues::FacetValues, dh::DofHandler, ch::ConstraintHandler, outflow::OutflowBC, D_inflow_boundary::Vector{Vector{Float64}}; save_phi::Union{Bool,Tuple{Int64, Int64, Int64}}=false)
+function solve_all_timesteps!(sensors::Sensors,LHS_matrix::SparseMatrixCSC, LHS_matrix_init::SparseMatrixCSC, M_T0::SparseMatrixCSC, M_T1::SparseMatrixCSC, domain::AbstractDomain, trans::σTransform, χs::Vector{Float64}, σs::Vector{Float64}, time_vec::Vector{Float64}, timeMethod::AbstractTimeSteppingMethod, facetvalues::FacetValues, dh::DofHandler, ch::ConstraintHandler, outflow::OutflowBC, D_inflow_boundary::Vector{Vector{Float64}}; save_phi::Union{Bool,Tuple{Int64, Int64, Int64}}=false, apply_full_relaxation::Bool=false)
     if isa(save_phi,Tuple{Int64, Int64, Int64}) || save_phi
-        all_etas, all_phis = solve_all_timesteps(LHS_matrix, LHS_matrix_init, M_T0, M_T1, domain, trans, χs, σs, time_vec, timeMethod, facetvalues, dh, ch, outflow, D_inflow_boundary, save_phi=save_phi);
+        all_etas, all_phis = solve_all_timesteps(LHS_matrix, LHS_matrix_init, M_T0, M_T1, domain, trans, χs, σs, time_vec, timeMethod, facetvalues, dh, ch, outflow, D_inflow_boundary, save_phi=save_phi, apply_full_relaxation=apply_full_relaxation);
         extractSensorData!(sensors,all_etas,χs,save_phi=save_phi)
         return all_etas, all_phis, sensors
     else
-        all_etas = solve_all_timesteps(LHS_matrix, LHS_matrix_init, M_T0, M_T1, domain, trans, χs, σs, time_vec, timeMethod, facetvalues, dh, ch, outflow, D_inflow_boundary, save_phi=save_phi);
+        all_etas = solve_all_timesteps(LHS_matrix, LHS_matrix_init, M_T0, M_T1, domain, trans, χs, σs, time_vec, timeMethod, facetvalues, dh, ch, outflow, D_inflow_boundary, save_phi=save_phi, apply_full_relaxation=apply_full_relaxation);
         extractSensorData!(sensors,all_etas,χs,save_phi=save_phi)
         return all_etas, sensors
     end 
