@@ -72,7 +72,9 @@ function laplace(sol::Matrix{Float64}, Dχ::Real, Dσ::Real, trans::σTransform,
             b = eval_bath(trans.tBath,χ,0)
             db = eval_bath(trans.tBath,χ,1)
             d2b = eval_bath(trans.tBath,χ,2)
-            lap[i,j] = 1/b_L^2*dχχ[i,j] - (σ*b*d2b - 2*σ*db^2)/(b_L^2*b^2)*dσ[i,j] - 2*(σ*db)/(b_L^2*b)*dχσ[i,j] + (((σ*db)/(b_L*b))^2+1/b^2)*dσσ[i,j]
+            lap[i,j] = 1/b_L^2*dχχ[i,j] - 2*(σ*db)/(b_L^2*b)*dχσ[i,j] - (σ*b*d2b-σ*(db)^2)/(b_L^2*b^2)*dσ[i,j] +
+                        (σ*db^2)/(b_L^2*b^2)*(dσ[i,j] + σ*dσσ[i,j]) + 1/b^2*dσσ[i,j]
+                        
         end
     end
     return lap

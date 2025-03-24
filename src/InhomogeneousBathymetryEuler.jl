@@ -13,7 +13,7 @@ export computeDerivativeOnBoundary, laplace
 export GRAV
 export TrueSolution, assemble_f_global, assemble_g_global, coefficientVector, assemble_h_global, assemble_manufactured_global, assemble_f_global_alt, computeBathNormal, assemble_l_global
 export Sensors, extractSensorData!
-export computeError, computeErrorL2, computeErrorMax
+export computeError, computeErrorL2, computeErrorMax, computeEOC
 #export plotSensorData, plotSensorData!
 
 include("helpfulFunctions.jl")

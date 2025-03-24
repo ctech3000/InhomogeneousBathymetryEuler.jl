@@ -23,3 +23,12 @@ end
 function computeErrorMax(u_ana::Vector{Float64}, u_num::Vector{Float64})
     return maximum(abs.(u_ana - u_num))
 end
+
+function computeEOC(errors::Vector{Float64},dxs::Vector{Float64})
+    N = length(errors) - 1
+    eoc = zeros(N)
+    for i = 1:N
+        eoc[i] = log(errors[i]/errors[i+1])/log(dxs[i]/dxs[i+1])
+    end
+    return eoc
+end

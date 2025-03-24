@@ -2,15 +2,16 @@ using InhomogeneousBathymetryEuler, Ferrite, GLMakie, SparseArrays, LinearAlgebr
 
 x_L = 0.0
 x_R = 3
-nχ = 100
-nσ = 100
+fac = 1
+nχ = 50*fac
+nσ = 50*fac
 timeMethod = BackwardDiff()
 outflow = OutflowBC("Dirichlet")
 bathPoints = collect(LinRange(x_L,x_R,nχ+1))
 #bath = Bathymetry(bathPoints,-3*ones(Float64,nχ+1))
-#bath = Bathymetry(bathPoints,"Gauss",shift=0.5,bHeight=0.3,depth=-1.0)
-bath = Bathymetry(bathPoints,"Ramp",rampStart=0.0,rampEnd=3.0,rampHeightStart=-3.0,rampHeightEnd=-2.0)
-#bath = Bathymetry(bathPoints,"TrueGauss",shift=1.5,bHeight=1, depth=-3.0, sigma=-0.2)
+#bath = Bathymetry(bathPoints,"Gauss",shift=1.5,bHeight=0.3,depth=-3.0)
+#bath = Bathymetry(bathPoints,"Ramp",rampStart=0.0,rampEnd=3.0,rampHeightStart=-3.0,rampHeightEnd=-2.0)
+bath = Bathymetry(bathPoints,"TrueGauss",shift=1.5,bHeight=1, depth=-3.0, sigma=-0.2)
 
 wave = SimpleWave()
 domain = DomainProperties(x_L,x_R,bath,wave)
@@ -44,7 +45,10 @@ print("K, M done\n")
 b(x) = eval_bath(bath,x)
 b_prime(x) = eval_bath(bath,x,1)
 b_pprime(x) = eval_bath(bath,x,2)
-u_0(x,z) = sin(x-domain.x_R)*cosh(z-b(x))
+u_0(x,z) = sin(x-domain.x_R)*cosh(z-domain.b_L)
+b_prime_with_val(x) = b(x), b_prime(x)
+
+@implement_gradient b b_prime_with_val
 
 function u_0_dx_(x,z,u_0::Function)
     X = Tensors.Tensor{1,2,Float64}((x,z))
@@ -61,9 +65,15 @@ function f_0_(x,z,u_0::Function)
     return Tensors.laplace(x->u_0(x[1],x[2]),X)
 end
 
+function b_dx_(x,b_::Function)
+    X = Tensors.Tensor{1,2,Float64}((x,0))
+    return Tensors.gradient(x->b_(x[1],x[2]),X)[1]
+end
+
 u_0_dx(x,z) = u_0_dx_(x,z,u_0)
 u_0_dz(x,z) = u_0_dz_(x,z,u_0)
 f_0(x,z) = f_0_(x,z,u_0)
+b_prime_tensors(x) = b_dx_(x,(x,d) -> b(x))
 
 f_0_mat = [f_0(trans.x(χ),trans.z(χ,σ)) for χ in χs, σ in σs]
 
@@ -118,8 +128,10 @@ u_num_dx_B, u_num_dz_B = computeDerivativeOnBoundary(u_num_nodes_mat,Dχ,Dσ,χs
 lines!(ax3,xs,[normals[i][1]*u_num_dx_B[i] + normals[i][2]*u_num_dz_B[i] for i = eachindex(xs)])
 lines!(ax3,xs,[normals[i][1]*u_0_dx.(xs[i],zs[i]) + normals[i][2]*u_0_dz.(xs[i],zs[i]) for i = eachindex(xs)])
 
-rhs_num = InhomogeneousBathymetryEuler.laplace(u_num_nodes_mat, Dχ, Dσ, trans, χs, σs) - f_0_mat[2:end-1,2:end-1]
-rhs_0 = InhomogeneousBathymetryEuler.laplace(u_0_nodes_mat, Dχ, Dσ, trans, χs, σs) - f_0_mat[2:end-1,2:end-1]
+#= rhs_num = InhomogeneousBathymetryEuler.laplace(u_num_nodes_mat, Dχ, Dσ, trans, χs, σs) - f_0_mat[2:end-1,2:end-1]
+rhs_0 = InhomogeneousBathymetryEuler.laplace(u_0_nodes_mat, Dχ, Dσ, trans, χs, σs) - f_0_mat[2:end-1,2:end-1] =#
+rhs_num = InhomogeneousBathymetryEuler.laplace(u_num_nodes_mat, Dχ, Dσ, trans, χs, σs)
+rhs_0 = InhomogeneousBathymetryEuler.laplace(u_0_nodes_mat, Dχ, Dσ, trans, χs, σs)
 f4 = Figure()
 ax4 = Axis3(f4[1,1],xlabel="χ",ylabel="σ")
 surface!(ax4,χs,σs,rhs_num)

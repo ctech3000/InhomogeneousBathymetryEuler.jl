@@ -1,13 +1,14 @@
 using InhomogeneousBathymetryEuler
-using Ferrite
+using Ferrite, JLD2
 
 nχ_base = 10
-factors = [2^i for i = 0:2]
-bathTypes = ["flat","gauss","sin","bigSin"]
+factors = [2^i for i = 0:6]
+bathTypes = ["flat","gauss","bigGauss","sin","bigSin"]
 nHeats1 = length(factors)
 nHeats2 = length(bathTypes)
 errorsL2 = zeros(Float64,(nHeats1,nHeats2))
 errorsMax = zeros(Float64,(nHeats1,nHeats2))
+Dχs = zeros(Float64,(nHeats1,nHeats2))
 
 for idx_f = 1:nHeats1
     for idx_b = 1:nHeats2
@@ -22,11 +23,13 @@ for idx_f = 1:nHeats1
         if bathTypes[idx_b] == "flat"
             bath = Bathymetry(bathPoints,-ones(Float64,nχ+1))
         elseif bathTypes[idx_b] == "gauss"
-            bath = Bathymetry(bathPoints,"TrueGauss",shift=0.5,bHeight=0.5,depth=-1.0,sigma=-0.1)
+            bath = Bathymetry(bathPoints,"TrueGauss",shift=0.5,bHeight=1/3,depth=-1.0,sigma=-0.1)
+        elseif bathTypes[idx_b] == "bigGauss"
+            bath = Bathymetry(bathPoints,"TrueGauss",shift=0.5,bHeight=2/3,depth=-1.0,sigma=-0.1)
         elseif bathTypes[idx_b] == "sin"
-            bath = Bathymetry(bathPoints,0.2*sin.(4*pi*bathPoints).-1)
+            bath = Bathymetry(bathPoints,1/6*sin.(4*pi*bathPoints).-5/6)
         elseif bathTypes[idx_b] == "bigSin"
-            bath = Bathymetry(bathPoints,0.6*sin.(4*pi*bathPoints).-1)
+            bath = Bathymetry(bathPoints,1/3*sin.(4*pi*bathPoints).-2/3)
         end
 
         wave = SimpleWave()
@@ -34,6 +37,7 @@ for idx_f = 1:nHeats1
         trans = σTransform(domain)
         grid, χs, σs, Dχ, Dσ = discretizeTransformedDomain(domain, trans, nχ=nχ, nσ=nσ)
         @show Dχ, Dσ, nχ, nσ
+        Dχs[idx_f,idx_b] = Dχ
         time_vec = collect(0:0.05:30) 
 
         #setup dofs
@@ -55,7 +59,10 @@ for idx_f = 1:nHeats1
         b(x) = eval_bath(bath,x)
         b_prime(x) = eval_bath(bath,x,1)
         b_pprime(x) = eval_bath(bath,x,2)
-        u_0(x,z) = sin(x-domain.x_R)*cosh(z-b(x))
+        u_0(x,z) = sin(x-domain.x_R)*cosh(z-domain.b_L)
+        b_prime_with_val(x) = b(x), b_prime(x)
+
+        @implement_gradient b b_prime_with_val
 
         function u_0_dx_(x,z,u_0::Function)
             X = Tensors.Tensor{1,2,Float64}((x,z))
@@ -104,3 +111,5 @@ for idx_f = 1:nHeats1
         errorsMax[idx_f,idx_b] = computeError(u_num_nodes_mat,u_0_nodes_mat,Dχ,norm="max")
     end
 end
+
+jldsave("examples/results/plottingScripts/convManSolData.jld2"; errorsL2, errorsMax, Dχs)
