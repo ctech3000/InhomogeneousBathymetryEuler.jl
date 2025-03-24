@@ -2,8 +2,8 @@ using InhomogeneousBathymetryEuler, Ferrite, GLMakie, SparseArrays, LinearAlgebr
 
 x_L = 0.0
 x_R = 3
-nχ = 25*2*2
-nσ = 25*2*2
+nχ = 100
+nσ = 100
 timeMethod = BackwardDiff()
 outflow = OutflowBC("Dirichlet")
 bathPoints = collect(LinRange(x_L,x_R,nχ+1))
@@ -44,7 +44,7 @@ print("K, M done\n")
 b(x) = eval_bath(bath,x)
 b_prime(x) = eval_bath(bath,x,1)
 b_pprime(x) = eval_bath(bath,x,2)
-u_0(x,z) = sin(x-domain.x_R)*cosh(z-domain.b_L)
+u_0(x,z) = sin(x-domain.x_R)*cosh(z-b(x))
 
 function u_0_dx_(x,z,u_0::Function)
     X = Tensors.Tensor{1,2,Float64}((x,z))
@@ -75,7 +75,6 @@ u_0_dz_coefficients = coefficientVector(dh,u.u_0_dz,trans)
 u_0_nodes = evaluate_at_grid_nodes(dh,u_0_coefficients,:phi) 
 h = M_T0*u_0_dz_coefficients
 l = assemble_l_global(facetvalues,dh,domain,trans,u)
-#h = assemble_h_global(facetvalues,dh,trans,u)
 
 ch = ConstraintHandler(dh)
 dbc = dirichlet_from_discretized_data(dh.grid, :phi, "left", zeros(Float64, nσ+1)) # "left", because in transformed domain coordinates are flipped

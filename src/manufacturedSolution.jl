@@ -135,7 +135,7 @@ function assemble_l_element!(le::Vector, facetvalues::FacetValues, facet::FacetC
     for q_point in 1:n_q_points
         dS = getdetJdV(facetvalues, q_point)
         q_point_coords = spatial_coordinate(facetvalues, q_point, node_coords)
-        D_point = abs(trans.tBath.vals[end])
+        D_point = sqrt(trans.tBath.vals[end]^2 + eval_bath(trans.tBath,q_point_coords[1],1)^2)
         x = trans.x(q_point_coords[1])
         z = trans.z(q_point_coords...)
         normal = computeBathNormal(x,domain)
