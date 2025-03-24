@@ -13,8 +13,8 @@ timeMethod = BackwardDiff()
 outflow = OutflowBC("Dirichlet")
 bathPoints = collect(LinRange(x_L,x_R,nχ+1))
 #bath = Bathymetry(bathPoints,-0.3*ones(Float64,nχ+1)) # flat bathy
-#bath = Bathymetry(bathPoints,"Gauss",shift=2.5) # gauss bathy 
-bath = Bathymetry(bathPoints,"Ramp",rampStart=1,rampEnd=5,rampHeightStart=-3,rampHeightEnd=-1) # ramp bathy
+bath = Bathymetry(bathPoints,"Gauss",shift=2.5) # gauss bathy 
+#bath = Bathymetry(bathPoints,"Ramp",rampStart=1,rampEnd=5,rampHeightStart=-3,rampHeightEnd=-1) # ramp bathy
 wave = SimpleWave()     # plane wave λ=4.78
 #wave,_,_ = IrregWave("examples/irregWaveData_noBathy.jld2",inflowDepth=0.3) # irreg wave
 #domain = DampedDomainProperties(x_L,x_D,x_R,bath,wave)

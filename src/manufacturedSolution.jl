@@ -116,19 +116,19 @@ end
 
 function assemble_l_global(facetvalues::FacetValues, dh::DofHandler, domain::AbstractDomain, trans::σTransform, u::TrueSolution)
     n_basefuncs = getnbasefunctions(facetvalues)
-    he = zeros(n_basefuncs)
-    h = zeros(ndofs(dh))
+    le = zeros(n_basefuncs)
+    l = zeros(ndofs(dh))
     for (facet_idx, facet) in enumerate(FacetIterator(dh, getfacetset(dh.grid, "top")))
         reinit!(facetvalues, facet)
-        assemble_l_element!(he, facetvalues, facet, domain, trans, u)
-        insert_into_f!(h, he, facetvalues, facet)
+        assemble_l_element!(le, facetvalues, facet, domain, trans, u)
+        insert_into_f!(l, le, facetvalues, facet)
     end
-    return h
+    return l
 end
 
-function assemble_l_element!(he::Vector, facetvalues::FacetValues, facet::FacetCache, domain::AbstractDomain, trans::σTransform, u::TrueSolution)
+function assemble_l_element!(le::Vector, facetvalues::FacetValues, facet::FacetCache, domain::AbstractDomain, trans::σTransform, u::TrueSolution)
     n_basefuncs = getnbasefunctions(facetvalues)
-    fill!(he, 0)
+    fill!(le, 0)
     node_coords = getcoordinates(facet)
     n_q_points = getnquadpoints(facetvalues)
 
@@ -142,7 +142,7 @@ function assemble_l_element!(he::Vector, facetvalues::FacetValues, facet::FacetC
         l_point = u.u_0_dx(x,z)*normal[1] + u.u_0_dz(x,z)*normal[2]
         for i in 1:n_basefuncs
             Ni = shape_value(facetvalues, q_point, i)
-            he[i] += (Ni * l_point * D_point) * dS
+            le[i] += (Ni * l_point * D_point) * dS
         end
     end
 end

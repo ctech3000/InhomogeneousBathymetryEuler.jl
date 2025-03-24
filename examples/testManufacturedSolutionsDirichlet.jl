@@ -2,15 +2,15 @@ using InhomogeneousBathymetryEuler, Ferrite, GLMakie, SparseArrays, LinearAlgebr
 
 x_L = 0.0
 x_R = 3
-nχ = 50
-nσ = 50
+nχ = 25*2*2
+nσ = 25*2*2
 timeMethod = BackwardDiff()
 outflow = OutflowBC("Dirichlet")
 bathPoints = collect(LinRange(x_L,x_R,nχ+1))
 #bath = Bathymetry(bathPoints,-3*ones(Float64,nχ+1))
 #bath = Bathymetry(bathPoints,"Gauss",shift=0.5,bHeight=0.3,depth=-1.0)
-bath = Bathymetry(bathPoints,"Ramp",rampStart=0.0,rampEnd=3.0,rampHeightStart=-3.0,rampHeightEnd=-3.0)
-#bath = Bathymetry(bathPoints,"TrueGauss",shift=1.5,bHeight=1, depth=-3.0)
+bath = Bathymetry(bathPoints,"Ramp",rampStart=0.0,rampEnd=3.0,rampHeightStart=-3.0,rampHeightEnd=-2.0)
+#bath = Bathymetry(bathPoints,"TrueGauss",shift=1.5,bHeight=1, depth=-3.0, sigma=-0.2)
 
 wave = SimpleWave()
 domain = DomainProperties(x_L,x_R,bath,wave)
@@ -44,7 +44,7 @@ print("K, M done\n")
 b(x) = eval_bath(bath,x)
 b_prime(x) = eval_bath(bath,x,1)
 b_pprime(x) = eval_bath(bath,x,2)
-u_0(x,z) = sin(x-domain.x_R)*cosh(z-b(x))
+u_0(x,z) = sin(x-domain.x_R)*cosh(z-domain.b_L)
 
 function u_0_dx_(x,z,u_0::Function)
     X = Tensors.Tensor{1,2,Float64}((x,z))
@@ -74,14 +74,14 @@ u_0_coefficients = coefficientVector(dh,u.u_0,trans)
 u_0_dz_coefficients = coefficientVector(dh,u.u_0_dz,trans)
 u_0_nodes = evaluate_at_grid_nodes(dh,u_0_coefficients,:phi) 
 h = M_T0*u_0_dz_coefficients
+l = assemble_l_global(facetvalues,dh,domain,trans,u)
 #h = assemble_h_global(facetvalues,dh,trans,u)
 
 ch = ConstraintHandler(dh)
 dbc = dirichlet_from_discretized_data(dh.grid, :phi, "left", zeros(Float64, nσ+1)) # "left", because in transformed domain coordinates are flipped
 add!(ch, dbc);
 close!(ch)
-RHS = -f + g + h
-#apply_dirichlet!(RHS,K_init,zeros(Float64,nσ+1),ch)
+RHS = -f + g + h + l
 apply!(K_init,RHS,ch)
 print("assembly done\n")
 
@@ -90,6 +90,9 @@ u_0_nodes_mat = reshape(u_0_nodes,(nχ+1,nσ+1))
 u_num_vec = K_init\RHS
 u_num_nodes = evaluate_at_grid_nodes(dh,u_num_vec,:phi)
 u_num_nodes_mat = reshape(u_num_nodes,(nχ+1,nσ+1));
+
+errorL2 = computeError(u_num_nodes_mat,u_0_nodes_mat,Dχ,norm="L2")
+errorMax = computeError(u_num_nodes_mat,u_0_nodes_mat,Dχ,norm="max")
 
 xs = zeros(length(σs))
 zs = trans.z(zeros(length(σs)),σs)
@@ -111,9 +114,10 @@ f3 = Figure()
 ax3 = Axis(f3[1,1])
 xs = trans.x(χs)
 zs = eval_bath(bath,xs)
-_, u_num_dz_B = computeDerivativeOnBoundary(u_num_nodes_mat,Dχ,Dσ,χs,ones(length(χs)),domain,trans,"top","physical")
-lines!(ax3,xs,u_num_dz_B)
-lines!(ax3,xs,u_0_dz.(xs,zs))
+normals = [computeBathNormal(x,domain) for x in xs]
+u_num_dx_B, u_num_dz_B = computeDerivativeOnBoundary(u_num_nodes_mat,Dχ,Dσ,χs,ones(length(χs)),domain,trans,"top","physical")
+lines!(ax3,xs,[normals[i][1]*u_num_dx_B[i] + normals[i][2]*u_num_dz_B[i] for i = eachindex(xs)])
+lines!(ax3,xs,[normals[i][1]*u_0_dx.(xs[i],zs[i]) + normals[i][2]*u_0_dz.(xs[i],zs[i]) for i = eachindex(xs)])
 
 rhs_num = InhomogeneousBathymetryEuler.laplace(u_num_nodes_mat, Dχ, Dσ, trans, χs, σs) - f_0_mat[2:end-1,2:end-1]
 rhs_0 = InhomogeneousBathymetryEuler.laplace(u_0_nodes_mat, Dχ, Dσ, trans, χs, σs) - f_0_mat[2:end-1,2:end-1]
