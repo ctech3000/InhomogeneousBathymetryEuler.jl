@@ -108,6 +108,18 @@ function compute_eta(phi_new::Vector{Float64}, phi_curr::Vector{Float64}, phi_ol
     return eta_new
 end
 
+function find_physical_ind(domain::AbstractDomain,trans::σTransform,χs::Vector{Float64})
+    χ_L = trans.χ(domain.x_L)
+    if domain isa DomainProperties
+        χ_D = trans.χ(domain.x_R)
+    else
+        χ_D = trans.χ(domain.x_D)
+    end
+    idx_χL = findall(χ->abs(χ-χ_L)==minimum(abs.(χs.-χ_L)),χs)[1]
+    idx_χD = findall(χ->abs(χ-χ_D)==minimum(abs.(χs.-χ_D)),χs)[1]
+    return idx_χL, idx_χD
+end
+
 function solve_all_timesteps(LHS_matrix::SparseMatrixCSC, LHS_matrix_init::SparseMatrixCSC, M_T0::SparseMatrixCSC, M_T1::SparseMatrixCSC, domain::AbstractDomain, trans::σTransform, χs::Vector{Float64}, σs::Vector{Float64}, time_vec::Vector{Float64}, timeMethod::AbstractTimeSteppingMethod, facetvalues::FacetValues, dh::DofHandler, ch::ConstraintHandler, outflow::OutflowBC, D_inflow_boundary::Vector{Vector{Float64}}; save_phi::Union{Bool,Tuple{Int64, Int64, Int64}}=false, apply_full_relaxation::Bool=false)
     nχ = length(χs) - 1
     nσ = length(σs) - 1
@@ -128,10 +140,12 @@ function solve_all_timesteps(LHS_matrix::SparseMatrixCSC, LHS_matrix_init::Spars
             all_phis[1] = zeros(Float64,((nχ+1),(nσ+1)))
         else
             skip_χ, skip_σ, skip_t = save_phi 
+            idx_χL, idx_χD = find_physical_ind(domain,trans,χs)
+            nχ_phys = idx_χL - idx_χD 
             all_etas = Vector{Vector{Float64}}(undef,round(Integer,(nt-1)/skip_t+1))
-            all_etas[1] = zeros(Float64,round(Integer,nχ/skip_χ+1))
+            all_etas[1] = zeros(Float64,round(Integer,nχ_phys/skip_χ+1))
             all_phis = Vector{Matrix{Float64}}(undef,round(Integer,(nt-1)/skip_t+1))
-            all_phis[1] = zeros(Float64,((round(Integer,nχ/skip_χ+1)),(round(Integer,nσ/skip_σ+1))))
+            all_phis[1] = zeros(Float64,((round(Integer,nχ_phys/skip_χ+1)),(round(Integer,nσ/skip_σ+1))))
         end
     end
         
@@ -154,8 +168,8 @@ function solve_all_timesteps(LHS_matrix::SparseMatrixCSC, LHS_matrix_init::Spars
         else
             if round(t_idx/skip_t) == t_idx/skip_t
                 phi_nodes_mat = reshape(evaluate_at_grid_nodes(dh,phi_new,:phi),(nχ+1,nσ+1))
-                all_phis[round(Integer,t_idx/skip_t)+1] = phi_nodes_mat[1:skip_χ:end,1:skip_σ:end]
-                all_etas[round(Integer,t_idx/skip_t)+1] = eta_new[1:skip_χ:end]
+                all_phis[round(Integer,t_idx/skip_t)+1] = phi_nodes_mat[idx_χD:skip_χ:idx_χL,1:skip_σ:end]
+                all_etas[round(Integer,t_idx/skip_t)+1] = eta_new[idx_χD:skip_χ:idx_χL]
             end
         end
 

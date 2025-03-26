@@ -3,7 +3,7 @@ using Ferrite, JLD2
 
 nχ_base = 10
 factors = [2^i for i = 0:6]
-bathTypes = ["flat","gauss","bigGauss","sin","bigSin"]
+bathTypes = ["flat","gauss0.25","gauss0.5","gauss0.75"]
 nHeats1 = length(factors)
 nHeats2 = length(bathTypes)
 errorsL2 = zeros(Float64,(nHeats1,nHeats2))
@@ -22,14 +22,12 @@ for idx_f = 1:nHeats1
         bathPoints = collect(LinRange(x_L,x_R,nχ+1))
         if bathTypes[idx_b] == "flat"
             bath = Bathymetry(bathPoints,-ones(Float64,nχ+1))
-        elseif bathTypes[idx_b] == "gauss"
-            bath = Bathymetry(bathPoints,"TrueGauss",shift=0.5,bHeight=1/3,depth=-1.0,sigma=-0.1)
-        elseif bathTypes[idx_b] == "bigGauss"
-            bath = Bathymetry(bathPoints,"TrueGauss",shift=0.5,bHeight=2/3,depth=-1.0,sigma=-0.1)
-        elseif bathTypes[idx_b] == "sin"
-            bath = Bathymetry(bathPoints,1/6*sin.(4*pi*bathPoints).-5/6)
-        elseif bathTypes[idx_b] == "bigSin"
-            bath = Bathymetry(bathPoints,1/3*sin.(4*pi*bathPoints).-2/3)
+        elseif bathTypes[idx_b] == "gauss0.25"
+            bath = Bathymetry(bathPoints,"TrueGauss",shift=0.5,bHeight=0.25,depth=-1.0,sigma=-0.1)
+        elseif bathTypes[idx_b] == "gauss0.5"
+            bath = Bathymetry(bathPoints,"TrueGauss",shift=0.5,bHeight=0.5,depth=-1.0,sigma=-0.1)
+        elseif bathTypes[idx_b] == "gauss0.75"
+            bath = Bathymetry(bathPoints,"TrueGauss",shift=0.5,bHeight=0.75,depth=-1.0,sigma=-0.1)
         end
 
         wave = SimpleWave()
