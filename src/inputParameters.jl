@@ -14,17 +14,19 @@ end
 
 function SimpleWave(amp::Real,freq::Real,phase::Real;hasFadeIn=true,inflowDepth::Real=0.0)
     tau = 2*pi/freq
-
+    if inflowDepth == 0.0
+        print("Warning: Inflow Depth of wave not defined, computation of analytic potential will take longer!\n")
+    end
     fadeIn(t) = hasFadeIn ? (t < 2*tau ? 1/2*(1-cos(pi*t/(2*tau))) : 1.0) : 1.0
     waveNumberAtInflow = computeWavenumber(freq,inflowDepth)
     return SimpleWave(amp, freq, phase, fadeIn, hasFadeIn,waveNumberAtInflow)
 end
 
-function SimpleWave() 
+function SimpleWave(;kwargs...) 
     amp = 0.0053740783
     freq = 2.199114857512855
     phase = 0
-    return SimpleWave(amp, freq, phase, hasFadeIn=true)
+    return SimpleWave(amp, freq, phase;kwargs...)
 end
 
 function SimpleWave(str::String)

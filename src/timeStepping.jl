@@ -120,7 +120,44 @@ function find_physical_ind(domain::AbstractDomain,trans::σTransform,χs::Vector
     return idx_χL, idx_χD
 end
 
-function solve_all_timesteps(LHS_matrix::SparseMatrixCSC, LHS_matrix_init::SparseMatrixCSC, M_T0::SparseMatrixCSC, M_T1::SparseMatrixCSC, domain::AbstractDomain, trans::σTransform, χs::Vector{Float64}, σs::Vector{Float64}, time_vec::Vector{Float64}, timeMethod::AbstractTimeSteppingMethod, facetvalues::FacetValues, dh::DofHandler, ch::ConstraintHandler, outflow::OutflowBC, D_inflow_boundary::Vector{Vector{Float64}}; save_phi::Union{Bool,Tuple{Int64, Int64, Int64}}=false, apply_full_relaxation::Bool=false)
+function computePhysDomainMask(dh::DofHandler, trans::σTransform, domain::AbstractDomain, Dχ::Real)
+    Dx = -trans.x(Dχ)
+    if domain isa DomainProperties
+        rightBound = domain.x_R
+        nextX = domain.x_L-1
+    else
+        rightBound = domain.x_D 
+        nextX = rightBound + Dx
+    end
+    etaMask = zeros(ndofs(dh))
+    phiMask = zeros(ndofs(dh))
+    for nodeId = 1:ndofs(dh)
+        vertexid = nodeid_to_vertexindex(dh.grid, nodeId)
+        dof = vertexdofs(dh, vertexid)[1]
+        dof_coord = dh.grid.nodes[nodeId].x
+        x = trans.x(dof_coord[1])
+        z = trans.z(dof_coord...)
+        if x >= domain.x_L && x <= rightBound
+            phiMask[dof] = 1
+            if abs(z) < 10^-12
+                etaMask[dof] = 1
+            end
+        elseif abs(x-nextX) < 1/2*Dx
+            phiMask[dof] = -1
+            if abs(z) < 10^-12
+                etaMask[dof] = -1
+            end
+        end
+    end
+    return phiMask, etaMask
+    
+end
+
+function computeEnergy(phi::Vector{Float64},eta::Vector{Float64},K::SparseMatrixCSC,M_T0::SparseMatrixCSC)
+    return 1/2*transpose(phi)*K*phi + 1/2*GRAV*transpose(eta)*M_T0*eta
+end
+
+function solve_all_timesteps(LHS_matrix::SparseMatrixCSC, LHS_matrix_init::SparseMatrixCSC, K_init::SparseMatrixCSC, M_T0::SparseMatrixCSC, M_T1::SparseMatrixCSC, domain::AbstractDomain, trans::σTransform, χs::Vector{Float64}, σs::Vector{Float64}, time_vec::Vector{Float64}, timeMethod::AbstractTimeSteppingMethod, facetvalues::FacetValues, dh::DofHandler, ch::ConstraintHandler, outflow::OutflowBC, D_inflow_boundary::Vector{Vector{Float64}}; save_phi::Union{Bool,Tuple{Int64, Int64, Int64}}=false, apply_full_relaxation::Bool=false, energy::Union{Vector{Float64},Nothing}=nothing)
     nχ = length(χs) - 1
     nσ = length(σs) - 1
     Dσ = σs[2] - σs[1]
@@ -148,7 +185,11 @@ function solve_all_timesteps(LHS_matrix::SparseMatrixCSC, LHS_matrix_init::Spars
             all_phis[1] = zeros(Float64,((round(Integer,nχ_phys/skip_χ+1)),(round(Integer,nσ/skip_σ+1))))
         end
     end
-        
+    if !isnothing(energy)
+        push!(energy,0.0)
+        phiMask, etaMask =  computePhysDomainMask(dh,trans,domain,χs[2]-χs[1])
+    end
+    
     for (t_idx,t_p) in ProgressBar(enumerate(time_vec[2:end]))
         g = assemble_g_global(facetvalues,dh,D_inflow_boundary,trans,domain.wave,t_p)
         RHS = compute_RHS(g,M_T0,M_T1,phi_curr,phi_old,phi_oldold,Dt,timeMethod)
@@ -173,6 +214,14 @@ function solve_all_timesteps(LHS_matrix::SparseMatrixCSC, LHS_matrix_init::Spars
             end
         end
 
+        if !isnothing(energy)
+            eta_coeff = coefficientVector(dh,eta_new)
+            eta_coeff_phys = eta_coeff.*etaMask #restrict phi and eta to (almost only) physical domain
+            phi_coeff_phys = phi_new.*phiMask
+            energy_new = computeEnergy(phi_coeff_phys,eta_coeff_phys,K_init,M_T0)
+            push!(energy,energy_new)
+        end
+
         phi_oldold = phi_old
         phi_old = phi_curr
         phi_curr = phi_new
@@ -185,13 +234,13 @@ function solve_all_timesteps(LHS_matrix::SparseMatrixCSC, LHS_matrix_init::Spars
     end
 end;
 
-function solve_all_timesteps!(sensors::Sensors,LHS_matrix::SparseMatrixCSC, LHS_matrix_init::SparseMatrixCSC, M_T0::SparseMatrixCSC, M_T1::SparseMatrixCSC, domain::AbstractDomain, trans::σTransform, χs::Vector{Float64}, σs::Vector{Float64}, time_vec::Vector{Float64}, timeMethod::AbstractTimeSteppingMethod, facetvalues::FacetValues, dh::DofHandler, ch::ConstraintHandler, outflow::OutflowBC, D_inflow_boundary::Vector{Vector{Float64}}; save_phi::Union{Bool,Tuple{Int64, Int64, Int64}}=false, apply_full_relaxation::Bool=false)
+function solve_all_timesteps!(sensors::Sensors,LHS_matrix::SparseMatrixCSC, LHS_matrix_init::SparseMatrixCSC, K_init::SparseMatrixCSC, M_T0::SparseMatrixCSC, M_T1::SparseMatrixCSC, domain::AbstractDomain, trans::σTransform, χs::Vector{Float64}, σs::Vector{Float64}, time_vec::Vector{Float64}, timeMethod::AbstractTimeSteppingMethod, facetvalues::FacetValues, dh::DofHandler, ch::ConstraintHandler, outflow::OutflowBC, D_inflow_boundary::Vector{Vector{Float64}}; save_phi::Union{Bool,Tuple{Int64, Int64, Int64}}=false, apply_full_relaxation::Bool=false)
     if isa(save_phi,Tuple{Int64, Int64, Int64}) || save_phi
-        all_etas, all_phis = solve_all_timesteps(LHS_matrix, LHS_matrix_init, M_T0, M_T1, domain, trans, χs, σs, time_vec, timeMethod, facetvalues, dh, ch, outflow, D_inflow_boundary, save_phi=save_phi, apply_full_relaxation=apply_full_relaxation);
+        all_etas, all_phis = solve_all_timesteps(LHS_matrix, LHS_matrix_init,K_init, M_T0, M_T1, domain, trans, χs, σs, time_vec, timeMethod, facetvalues, dh, ch, outflow, D_inflow_boundary, save_phi=save_phi, apply_full_relaxation=apply_full_relaxation);
         extractSensorData!(sensors,all_etas,χs,save_phi=save_phi)
         return all_etas, all_phis, sensors
     else
-        all_etas = solve_all_timesteps(LHS_matrix, LHS_matrix_init, M_T0, M_T1, domain, trans, χs, σs, time_vec, timeMethod, facetvalues, dh, ch, outflow, D_inflow_boundary, save_phi=save_phi, apply_full_relaxation=apply_full_relaxation);
+        all_etas = solve_all_timesteps(LHS_matrix, LHS_matrix_init,K_init, M_T0, M_T1, domain, trans, χs, σs, time_vec, timeMethod, facetvalues, dh, ch, outflow, D_inflow_boundary, save_phi=save_phi, apply_full_relaxation=apply_full_relaxation);
         extractSensorData!(sensors,all_etas,χs,save_phi=save_phi)
         return all_etas, sensors
     end 

@@ -204,6 +204,19 @@ function coefficientVector(dh::Ferrite.DofHandler, func::Function, trans::σTran
     return coeff
 end
 
+function coefficientVector(dh::Ferrite.DofHandler, valsSurface::Vector{Float64})
+    nPointsOnSurface = length(valsSurface)
+    node_ids = 1:nPointsOnSurface
+    coeff = zeros(Float64, ndofs(dh))
+
+    for (idx,node_id) in enumerate(node_ids)
+        vertexid = nodeid_to_vertexindex(dh.grid, node_id)
+        dof = vertexdofs(dh, vertexid)[1]
+        coeff[dof] = valsSurface[idx]
+    end
+    return coeff
+end
+
 function assemble_f_global_alt(cellvalues::CellValues, dh::DofHandler, D_domain::Vector{Vector{Float64}}, trans::σTransform, u::TrueSolution)
     K = allocate_matrix(dh)
     n_basefuncs = getnbasefunctions(cellvalues)

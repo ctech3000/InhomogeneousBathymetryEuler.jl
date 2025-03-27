@@ -94,3 +94,44 @@ function plotSensorData!(fig::GLMakie.Figure,numSensor::Sensors,time_vec::Vector
     end
     axislegend(axs[i],position=:lb)
 end
+
+function plotSurfaceOverTime(eta::Vector{Vector{Float64}},time_vec::Vector{Float64},χs::Vector{Float64},label::String)
+    fig = Figure()
+    ax = Axis(fig[1,1],xlabel="χ",ylabel="η",title="η on surface")
+    t_sl = GLMakie.Slider(fig[2,1], range=eachindex(time_vec),startvalue=1)
+    eta_t = GLMakie.lift(t_sl.value) do t
+        eta[t]
+    end
+    M = maximum(maximum([abs.(eta[i]) for i = 1:length(eta)]))
+    lines!(ax,χs,eta_t,label=label)
+    ylims!(ax,-1.4*M,1.4*M)
+    GLMakie.axislegend(ax,position=:lt)
+    return fig
+end
+
+function plotSurfaceOverTime!(fig::GLMakie.Figure,eta::Vector{Vector{Float64}},time_vec::Vector{Float64},χs::Vector{Float64},label::String)
+    for leg in fig.content 
+        if  leg isa Legend
+            delete!(leg)
+        end
+    end
+    axs = []
+    for content in fig.content
+        if content isa Axis
+            push!(axs,content)
+        end
+    end
+    ax = axs[1]
+    sls = []
+    for content in fig.content
+        if content isa GLMakie.Slider
+            push!(sls,content)
+        end
+    end
+    t_sl = sls[1]
+    eta_t = GLMakie.lift(t_sl.value) do t
+        eta[t]
+    end
+    lines!(ax,χs,eta_t,label=label)
+    GLMakie.axislegend(ax,position=:lt);
+end

@@ -4,11 +4,11 @@ using InhomogeneousBathymetryEuler
 x_L = 0.0
 x_D = 10.0
 x_R = 20.0
-T = 15
-wave = IrregWave([0.05,0.01,0.005],[2*pi*0.35,1.3,10],[0,0.3,0.5])
+T = 50
+wave = IrregWave([0.005,0.001,0.0005],[2*pi*0.35,1.3,10],[0,0.3,0.5],inflowDepth=0.3)
 
 nχ_base = 200
-nt_base = 75
+nt_base = 250
 facs = [2^i for i = 0:6]
 nFacs = length(facs)
 
@@ -54,7 +54,7 @@ for i = eachindex(facs)
 
     K, K_init, M_T0, M_T1, M_T2, LHS_matrix, LHS_matrix_init, ch = init_K_M(cellvalues, facetvalues, dh,domain,B_domain, B_tilde_domain, D_domain, D_inflow_boundary, D_surface_boundary, trans, outflow, timeMethod, time_vec, nσ);
     print("assembly done, solve timesteps...\n")
-    all_etas, all_phis = solve_all_timesteps(LHS_matrix, LHS_matrix_init, M_T0, M_T1, domain, trans, χs, σs, time_vec, timeMethod, facetvalues, dh, ch, outflow, D_inflow_boundary, save_phi=(facs[i],facs[i],facs[i]));
+    all_etas, all_phis = solve_all_timesteps(LHS_matrix, LHS_matrix_init, K_init, M_T0, M_T1, domain, trans, χs, σs, time_vec, timeMethod, facetvalues, dh, ch, outflow, D_inflow_boundary, save_phi=(facs[i],facs[i],facs[i]));
     etas[i] = all_etas
     phis[i] = all_phis
 end
@@ -65,5 +65,5 @@ domain = DampedDomainProperties(x_L,x_D,x_R,bath,wave)
 trans = σTransform(domain)
 time_vec = collect(LinRange(0,T,nt_base))
 xs1 = collect(LinRange(x_L,x_D,round(Integer,nχ_base*facs[1]/2+1)))
-χs1 = trans.χ.(xs1)
-jldsave("examples/results/plottingScripts/convEuler_noBathyData.jld2";etas,phis,Dχs,Dσs,Dts,domain,wave,trans,time_vec,xs1,χs1)
+χs1 = trans.χ.(xs1[end:-1:1])
+jldsave("examples/results/plottingScripts/temp_new/convEuler_noBathyData.jld2";etas,phis,Dχs,Dσs,Dts,domain,wave,trans,time_vec,xs1,χs1)
