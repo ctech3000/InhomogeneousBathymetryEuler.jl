@@ -1,2 +1,4 @@
-include("results/computationScripts/convEuler_Bathy.jl")
-include("results/computationScripts/convEuler_noBathy.jl")
+print("running script 1...\n")
+include("results/computationScripts/relaxationVsDirectComp.jl")
+print("running script 2...\n")
+include("results/computationScripts/dampingTest.jl")

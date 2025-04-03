@@ -2,13 +2,14 @@ using InhomogeneousBathymetryEuler
 using Ferrite, JLD2
 
 nχ_base = 10
-factors = [2^i for i = 0:6]
+factors = [2^i for i = 0:5]
 bathTypes = ["flat","gauss0.25","gauss0.5","gauss0.75"]
 nHeats1 = length(factors)
 nHeats2 = length(bathTypes)
 errorsL2 = zeros(Float64,(nHeats1,nHeats2))
 errorsMax = zeros(Float64,(nHeats1,nHeats2))
 Dχs = zeros(Float64,(nHeats1,nHeats2))
+max_u_0s = zeros(Float64,(nHeats1,nHeats2))
 
 for idx_f = 1:nHeats1
     for idx_b = 1:nHeats2
@@ -89,7 +90,7 @@ for idx_f = 1:nHeats1
         u_0_nodes = evaluate_at_grid_nodes(dh,u_0_coefficients,:phi) 
         f = assemble_f_global(cellvalues, dh, B_domain, B_tilde_domain, D_domain, trans, u)
         g = assemble_g_global(facetvalues, dh, D_inflow_boundary, trans, u)
-        h = M_T0*u_0_dz_coefficients
+        h = M_T0*(u_0_dz_coefficients + u_0_coefficients)
         l = assemble_l_global(facetvalues,dh,domain,trans,u)
 
         ch = ConstraintHandler(dh)
@@ -97,12 +98,15 @@ for idx_f = 1:nHeats1
         add!(ch, dbc);
         close!(ch)
         RHS = -f + g + h + l
-        apply!(K_init,RHS,ch)
+        LHS = K_init + M_T0
+        apply!(LHS,RHS,ch)
         print("assembly done\n")
 
         u_0_nodes_mat = reshape(u_0_nodes,(nχ+1,nσ+1))
+        max_u_0 = maximum(abs.(u_0_coefficients))
+        max_u_0s[idx_f,idx_b] = max_u_0
 
-        u_num_vec = K_init\RHS
+        u_num_vec = LHS\RHS
         u_num_nodes = evaluate_at_grid_nodes(dh,u_num_vec,:phi)
         u_num_nodes_mat = reshape(u_num_nodes,(nχ+1,nσ+1));
         errorsL2[idx_f,idx_b] = computeError(u_num_nodes_mat,u_0_nodes_mat,Dχ,norm="L2")
@@ -110,4 +114,4 @@ for idx_f = 1:nHeats1
     end
 end
 
-jldsave("examples/results/plottingScripts/convManSolData.jld2"; errorsL2, errorsMax, Dχs)
+jldsave("examples/results/plottingScripts/convManSolData.jld2"; errorsL2, errorsMax, Dχs, max_u_0s)

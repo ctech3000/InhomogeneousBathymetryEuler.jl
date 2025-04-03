@@ -3,25 +3,23 @@ using Ferrite
 
 x_RX = -10.0
 x_L = 0.0
-x_D = 10.0
-x_R = 20.0
-time_vec = collect(0:0.05:30)
-#= nχ = 1600
-nσ = 24 =#
-nχ = 5
-nσ = 5
+x_D = 20.0
+x_R = 30.0
+time_vec = collect(0:0.05:75)
+nχ = 1600
+nσ = 24 
 
 
 timeMethod = BackwardDiff()
 outflow = OutflowBC("Dirichlet")
 bathPoints = collect(LinRange(x_L,x_R,nχ+1))
-bath = Bathymetry(bathPoints,-0.3*ones(Float64,nχ+1)) # flat bathy
-#bath = Bathymetry(bathPoints,"Gauss",shift=2.5) # gauss bathy 
+#bath = Bathymetry(bathPoints,-0.3*ones(Float64,nχ+1)) # flat bathy
+bath = Bathymetry(bathPoints,"Gauss",shift=5) # gauss bathy 
 #bath = Bathymetry(bathPoints,"Ramp",rampStart=1,rampEnd=5,rampHeightStart=-3,rampHeightEnd=-1) # ramp bathy
-#wave = SimpleWave()     # plane wave λ=4.78
-wave,_,_ = IrregWave("examples/irregWaveData_noBathy.jld2",inflowDepth=0.3) # irreg wave
-#domain = DampedDomainProperties(x_L,x_D,x_R,bath,wave)
-domain = RelaxedDampedDomainProperties(x_RX,x_L,x_D,x_R,bath,wave)
+wave = SimpleWave(inflowDepth=0.3)     # plane wave λ=4.78
+#wave,_,_ = IrregWave("examples/irregWaveData_noBathy.jld2",inflowDepth=0.3) # irreg wave
+domain = DampedDomainProperties(x_L,x_D,x_R,bath,wave)
+#domain = RelaxedDampedDomainProperties(x_RX,x_L,x_D,x_R,bath,wave)
 trans = σTransform(domain)
 sensors = Sensors(domain,trans,time_vec)
 grid, χs, σs, Dχ, Dσ, nχ, nσ = discretizeTransformedDomain(domain, trans, nχ=nχ)
@@ -43,4 +41,5 @@ B_domain, B_tilde_domain, D_domain, D_inflow_boundary, D_surface_boundary = comp
 
 K, K_init, M_T0, M_T1, M_T2, LHS_matrix, LHS_matrix_init, ch = init_K_M(cellvalues, facetvalues, dh,domain,B_domain, B_tilde_domain, D_domain, D_inflow_boundary, D_surface_boundary, trans, outflow, timeMethod, time_vec, nσ);
 
-all_etas, all_phis, sensors = solve_all_timesteps!(sensors,LHS_matrix, LHS_matrix_init, K_init, M_T0, M_T1, domain, trans, χs, σs, time_vec, timeMethod, facetvalues, dh, ch, outflow, D_inflow_boundary, save_phi=true);
+energy = Float64[]
+all_etas = solve_all_timesteps(LHS_matrix, LHS_matrix_init, K_init, M_T0, M_T1, domain, trans, χs, σs, time_vec, timeMethod, facetvalues, dh, ch, outflow, D_inflow_boundary, save_phi=false, energy=energy);

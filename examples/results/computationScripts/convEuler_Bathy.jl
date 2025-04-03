@@ -48,7 +48,6 @@ for i = eachindex(facs)
     add!(dh, :phi, ip)
     close!(dh);
 
-    ### check next
     B_domain, B_tilde_domain, D_domain, D_inflow_boundary, D_surface_boundary = compute_B_D(cellvalues,facetvalues,dh,domain,trans)
 
 
@@ -66,4 +65,4 @@ trans = σTransform(domain)
 time_vec = collect(LinRange(0,T,nt_base))
 xs1 = collect(LinRange(x_L,x_D,round(Integer,nχ_base*facs[1]/2+1)))
 χs1 = trans.χ.(xs1[end:-1:1])
-jldsave("examples/results/plottingScripts/temp_new/convEuler_BathyData.jld2";etas,phis,Dχs,Dσs,Dts,domain,wave,trans,time_vec,xs1,χs1)
+jldsave("examples/results/plottingScripts/convEuler_BathyData.jld2";etas,phis,Dχs,Dσs,Dts,domain,wave,trans,time_vec,xs1,χs1)

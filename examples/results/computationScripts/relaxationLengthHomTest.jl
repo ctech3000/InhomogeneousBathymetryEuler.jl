@@ -1,19 +1,25 @@
+# test to check how close waves generated through relaxation layers of different length are to 
+# the analytic solution (-> homogeneous bath)
+
 using Ferrite, JLD2
 using InhomogeneousBathymetryEuler
 
 wave = IrregWave([0.005,0.001,0.0005],[2*pi*0.35,1.3,10],[0,0.3,0.5],inflowDepth=0.3)
 lam = 2*pi/computeWavenumber(wave,0.3)
 
-nt = 3850
+nt = 4000
 phys_wavelengths = 2
+damping_wavelengths = 2
 nχ_per_lam = 230
 extensions = [0,1,2,4,8]
+extensions = [0]
 nExt = length(extensions)
 
 x_L = 0.0
 x_D = phys_wavelengths*lam
-x_Rs = x_D.+extensions*lam
-T = 50
+x_R = x_D + damping_wavelengths*lam
+x_RXs = x_L.-extensions*lam
+T = 100
 
 etas = Vector{Vector{Vector{Float64}}}(undef,nExt)
 energies = Vector{Vector{Float64}}(undef,nExt)
@@ -26,18 +32,18 @@ transs = Vector{σTransform}(undef,nExt)
 
 for idx_e = eachindex(extensions)
     print("run $(idx_e)/$(nExt)...\n")
-    nχ = (phys_wavelengths+extensions[idx_e])*nχ_per_lam
-    x_R = x_Rs[idx_e]
+    nχ = (phys_wavelengths+extensions[idx_e]+damping_wavelengths)*nχ_per_lam
+    x_RX = x_RXs[idx_e]
     time_vec = collect(LinRange(0,T,nt))
 
     timeMethod = BackwardDiff()
     outflow = OutflowBC("Dirichlet")
     bathPoints = collect(LinRange(x_L,x_R,nχ+1))
-    bath = Bathymetry(bathPoints,-0.3*ones(size(bathPoints))) # gauss bathy 
+    bath = Bathymetry(bathPoints,-0.3*ones(size(bathPoints)))
     if extensions[idx_e] == 0
-        domain = DomainProperties(x_L,x_R,bath,wave)
-    else
         domain = DampedDomainProperties(x_L,x_D,x_R,bath,wave)
+    else
+        domain = RelaxedDampedDomainProperties(x_RX,x_L,x_D,x_R,bath,wave)
     end
     trans = σTransform(domain)
     sensors = Sensors(domain,trans,time_vec)
@@ -71,4 +77,4 @@ for idx_e = eachindex(extensions)
 end
 
 time_vec = collect(LinRange(0,T,nt))
-jldsave("examples/results/plottingScripts/dampingTestShortPhysData.jld2";etas,energies,Dχs,Dσs,Dts,domains,wave,transs,time_vec,χss)
+jldsave("examples/results/plottingScripts/relaxationLengthHomData.jld2";etas,energies,Dχs,Dσs,Dts,domains,wave,transs,time_vec,χss)

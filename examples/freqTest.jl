@@ -133,7 +133,7 @@ end;
 # ╔═╡ 4f9c2646-6552-4cfa-9ff8-b8eefba7de86
 begin
 	phases = zeros(size(filtered_amps))
-	wave = IrregWave(filtered_amps[2:end],filtered_omegas[2:end],phases[2:end],hasFadeIn=false)
+	wave = IrregWave(filtered_amps[2:end],filtered_omegas[2:end],phases[2:end],hasFadeIn=false,inflowDepth=0.3)
 	comp_eta = -1/9.81*[analyticPotential_dt(0,0,t,0.3,wave) for t in shifted_time]
 	fig4 = Figure()
 	ax4 = Axis(fig4[1,1])
@@ -149,7 +149,7 @@ begin
 	using CairoMakie
 	CairoMakie.activate!()
 	set_theme!(fonts = (; regular = "Liberation Serif", bold = "Liberation Serif Bold"))
-	irreg_wave = IrregWave(filtered_amps[2:end],filtered_omegas[2:end],phases[2:end],hasFadeIn=true)
+	irreg_wave = IrregWave(filtered_amps[2:end],filtered_omegas[2:end],phases[2:end],hasFadeIn=true,inflowDepth=0.3)
 	irreg_eta = -1/9.81*[analyticPotential_dt(0,0,t,0.3,irreg_wave) for t in shifted_time]
 end;
 
@@ -204,7 +204,7 @@ end
 
 # ╔═╡ 165e7b0b-0131-4446-8835-c5babf5c6c18
 begin
-	reg_wave = SimpleWave(0.005,2.199114857512855,phase_reg)
+	reg_wave = SimpleWave(0.005,2*pi*0.35,phase_reg,hasFadeIn=false)
 	reg_eta = -1/9.81*[analyticPotential_dt(0,0,t,0.3,reg_wave) for t in shifted_time]
 end
 
@@ -222,7 +222,7 @@ end
 
 # ╔═╡ Cell order:
 # ╟─ac91d146-a4d4-44a7-ace7-fdb770f0b367
-# ╟─7e8dab8d-fc6e-4a67-8ba1-87e48955b627
+# ╠═7e8dab8d-fc6e-4a67-8ba1-87e48955b627
 # ╟─2deecc02-48f9-46d3-8ac2-fba747562cbb
 # ╟─1834c732-00e8-4cbf-9869-7853f9174af3
 # ╟─58d9e3eb-2187-4eee-8ea1-457429b38fda
