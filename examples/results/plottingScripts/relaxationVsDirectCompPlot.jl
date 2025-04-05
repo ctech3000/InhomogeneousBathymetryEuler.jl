@@ -2,7 +2,14 @@
 
 using JLD2, CairoMakie
 using InhomogeneousBathymetryEuler
-set_theme!(fonts = (; regular = "Liberation Serif", bold = "Liberation Serif Bold"))
+virColors=[1,9]
+MT = Makie.MathTeXEngine
+mt_fonts_dir = joinpath(dirname(pathof(MT)), "..", "assets", "fonts", "NewComputerModern")
+
+set_theme!(fonts = (
+    regular = joinpath(mt_fonts_dir, "NewCM10-Regular.otf"),
+    bold = joinpath(mt_fonts_dir, "NewCM10-Regular.otf")
+))
 function linToCart(i_lin::Integer,N::Integer,M::Integer)
     A = zeros(N,M)
     return CartesianIndices(A)[i_lin].I[end:-1:1]
@@ -23,7 +30,7 @@ gauss_shifts = data["gauss_shifts"]
 Dχ = χss[1,1][2] - χss[1,1][1]
 nShifts = size(etas,1)
 nRx = size(etas,2)
-gauss_shifts_str = ["$(round(shift,digits=1)) m" for shift in gauss_shifts]
+gauss_shifts_str = [L"$ %$(round(shift,digits=1))$\,m" for shift in gauss_shifts]
 gen_str = ["Direct Generation","L_RX = 1λ","L_RX = 2λ","L_RX = 4λ"]
 peak_inds = [argmin(i -> abs(gauss_shifts[idx_s]-transs[idx_s,1].x(χss[idx_s,idx_w][i])), eachindex(χss[idx_s,idx_w])) for idx_s = 1:nShifts, idx_w = 1:nRx]
 five_m_shift_ind = -241
@@ -96,10 +103,10 @@ end =#
 
 
 fig3 = Figure(size=(600,250))
-ax3 = Axis(fig3[1,1:2],xlabel="Gauss Position (m)",ylabel="Amplitude (m)",xticks=WilkinsonTicks(6,k_min=4))
+ax3 = Axis(fig3[1,1:2],xlabel=L"$x_G$\,/m",ylabel=L"Amplitude\,/m$$",xticks=WilkinsonTicks(6,k_min=4))
 label_ad = ["Direct Generation",nothing,"Relaxed Generation"]
-for idx_w = [1,3]
-    lines!(ax3,gauss_shifts,max_eta_t_5behind_gauss[:,idx_w],label=label_ad[idx_w])
+for (i,idx_w) = enumerate([1,3])
+    lines!(ax3,gauss_shifts,max_eta_t_5behind_gauss[:,idx_w],label=label_ad[idx_w],color=virColors[i], colormap=:viridis, colorrange=(1,10))
 end
 Legend(fig3[1,3],ax3)
 #axislegend(ax3,position=:rb)
@@ -113,12 +120,13 @@ t_inds_gauss_hit_by_wave = [argmin(t_ind->abs((5+gauss_shifts[idx_s])/v_p - time
 fig4 = Figure(size=(600,450))
 how_much_time = 800
 axs4 = Axis[]
-label_ad = [L"Direct Wave Generation$$",L"Relaxed Wave Generation, $L_{RX}=1λ$",L"Relaxed Wave Generation, $L_{RX}=2λ$",L"Relaxed Wave Generation, $L_{RX}=4λ$"]
+virColors=[1,5,9]
+label_ad = ["Direct Wave Generation",L"Relaxed Wave Generation, $L_{RX}=1\lambda$",L"Relaxed Wave Generation, $L_{RX}=2\lambda$",L"Relaxed Wave Generation, $L_{RX}=4\lambda$"]
 for idx_w = 1:4
-    push!(axs4,Axis(fig4[linToCart(idx_w,2,2)...],xlabel=L"$t$ (s)",ylabel=L"$\hat{\eta}(x_G,t)$ (m)",yticks=[-0.005,0,0.005],title=label_ad[idx_w]))
-    for idx_s=[1,4,8]
+    push!(axs4,Axis(fig4[linToCart(idx_w,2,2)...],xlabel=L"$t$\,/s",ylabel=L"$\hat{\eta}(x_G,t)$\,/m",yticks=[-0.005,0,0.005],title=label_ad[idx_w]))
+    for (i,idx_s)=enumerate([1,4,8])
         t_inds_s = t_inds_gauss_hit_by_wave[idx_s]:t_inds_gauss_hit_by_wave[idx_s]+how_much_time
-        lines!(axs4[idx_w],time_vec[t_inds_s].-time_vec[t_inds_gauss_hit_by_wave[idx_s]],eta_t_5behind_gauss[idx_s,idx_w][t_inds_s],label=gauss_shifts_str[idx_s])
+        lines!(axs4[idx_w],time_vec[t_inds_s].-time_vec[t_inds_gauss_hit_by_wave[idx_s]],eta_t_5behind_gauss[idx_s,idx_w][t_inds_s],label=gauss_shifts_str[idx_s],color=virColors[i], colormap=:viridis, colorrange=(1,10))
     end
     ylims!(axs4[idx_w],-0.0075,0.0075)
 end
@@ -128,10 +136,11 @@ if saveFigs
 end
 fig4
 
+virColors=[1,9]
 fig5 = Figure(size=(700,300))
-ax5 = Axis(fig5[1,1],xlabel="t (s)",ylabel="η (m)",xticks=WilkinsonTicks(6,k_min=5))
-lines!(ax5,time_vec[1:2001],eta_t_5behind_gauss[end-2,1][1:2001],label="Direct Generation")
-lines!(ax5,time_vec[1:2001],eta_t_5behind_gauss[end-1,3][1:2001],label="Relaxed Generation")
+ax5 = Axis(fig5[1,1],xlabel=L"$t$\,/s",ylabel=L"$\eta$\,/m",xticks=WilkinsonTicks(6,k_min=5))
+lines!(ax5,time_vec[1:2001],eta_t_5behind_gauss[end-2,1][1:2001],label="Direct Generation",color=virColors[1], colormap=:viridis, colorrange=(1,10))
+lines!(ax5,time_vec[1:2001],eta_t_5behind_gauss[end-1,3][1:2001],label="Relaxed Generation",color=virColors[2], colormap=:viridis, colorrange=(1,10))
 axislegend(ax5,position=:rb)
 if saveFigs
     save("C:\\Users\\chris\\Desktop\\Masterarbeit\\Text\\masterthesis\\clean-math-thesis\\images\\dirRXoverTime.svg",fig5)

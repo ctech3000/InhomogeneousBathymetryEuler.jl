@@ -39,7 +39,7 @@ function loadRealSensorData(bathy::Bool)
     return eta_sensor_real_interp
 end
 
-function plotSensorData(numSensor::Sensors,time_vec::Vector{Float64};numTimeInds::Union{Nothing,Vector{Int64}}=nothing,shiftPlot::Int64=0,plotSWE::Bool=true,plotExp::Bool=true,bathy::Bool=true,legend::Bool=false,numLabel::Union{LaTeXStrings.LaTeXString,String}="η Euler",title::Union{LaTeXStrings.LaTeXString,String}="",sensorLinewidth::Real=3.0,sweLinestyle::Symbol=:dash,sweColor::Symbol=:gray)
+function plotSensorData(numSensor::Sensors,time_vec::Vector{Float64};numTimeInds::Union{Nothing,Vector{Int64}}=nothing,shiftPlot::Int64=0,plotSWE::Bool=true,plotExp::Bool=true,bathy::Bool=true,legend::Bool=false,numLabel::Union{LaTeXStrings.LaTeXString,String}="η Euler",title::Union{LaTeXStrings.LaTeXString,String}="",sensorLinewidth::Real=3.0,sweLinestyle::Symbol=:dash,sweColor::Symbol=:gray,virColors::Vector{Int64}=[1,9],eulerLinestyle::Union{Symbol,Tuple{Symbol,Symbol}}=:solid)
     if numTimeInds === nothing
         numTimeInds = 1:length(time_vec)
     end
@@ -54,8 +54,15 @@ function plotSensorData(numSensor::Sensors,time_vec::Vector{Float64};numTimeInds
         eta_sensor_real_interp = loadRealSensorData(bathy)
     end
     sensorPos = [0,2,4,6]
+    MT = Makie.MathTeXEngine
+    mt_fonts_dir = joinpath(dirname(pathof(MT)), "..", "assets", "fonts", "NewComputerModern")
+
+    set_theme!(fonts = (
+        regular = joinpath(mt_fonts_dir, "NewCM10-Regular.otf"),
+        bold = joinpath(mt_fonts_dir, "NewCM10-Regular.otf")
+    ))
     fig = Figure()
-    axs = [Axis(fig[linToCart(i,2,2)...],xlabel="t (s)", ylabel="η (m)",title="Sensor $(i) at $(sensorPos[i])m") for i = 1:4]
+    axs = [Axis(fig[linToCart(i,2,2)...],xlabel=L"$t$\,/s", ylabel=L"$\eta$\,/m",title=L"Sensor %$(i) at $ %$(sensorPos[i])$\,m") for i = 1:4]
     for i =1:4
         if plotExp
             if numLabel isa String
@@ -63,7 +70,7 @@ function plotSensorData(numSensor::Sensors,time_vec::Vector{Float64};numTimeInds
             else
                 expLabel = L"measurement$$"
             end
-            lines!(axs[i],time_vec[numTimeInds],eta_sensor_real_interp[i].(time_vec[numTimeInds]),label=expLabel,linewidth=sensorLinewidth)
+            lines!(axs[i],time_vec[numTimeInds],eta_sensor_real_interp[i].(time_vec[numTimeInds]),label=expLabel,linewidth=sensorLinewidth,color=virColors[1], colormap=:viridis, colorrange=(1,10))
         end
         if plotSWE
             if numLabel isa String
@@ -73,18 +80,18 @@ function plotSensorData(numSensor::Sensors,time_vec::Vector{Float64};numTimeInds
             end
             lines!(axs[i],time_SWE[numTimeIndsSWE],eta_sensor_SWE[i,numTimeIndsSWE],label=sweLabel,linestyle=sweLinestyle,color=sweColor)
         end
-        lines!(axs[i],time_vec[numTimeInds],numSensor.data[i][numTimeInds.-shiftPlot],label=numLabel)
+        lines!(axs[i],time_vec[numTimeInds],numSensor.data[i][numTimeInds.-shiftPlot],label=numLabel,color=virColors[2], colormap=:viridis, colorrange=(1,10),linestyle=eulerLinestyle)
         xlims!(axs[i],t0,T)
         if legend
             axislegend(axs[i],position=:lb)
         end
     end
-    Label(fig[begin-1,1:2], title, font = "Liberation Serif Bold")
+    Label(fig[begin-1,1:2], title)
 
     return fig
 end
 
-function plotSensorData!(fig::GLMakie.Figure,numSensor::Sensors,time_vec::Vector{Float64};legend::Bool=false,shiftPlot::Int64=0,numTimeInds::Union{Nothing,Vector{Int64}}=nothing,numLabel::Union{LaTeXStrings.LaTeXString,String}="η Euler")
+function plotSensorData!(fig::GLMakie.Figure,numSensor::Sensors,time_vec::Vector{Float64};legend::Bool=false,shiftPlot::Int64=0,numTimeInds::Union{Nothing,Vector{Int64}}=nothing,numLabel::Union{LaTeXStrings.LaTeXString,String}="η Euler",virColor::Int64=3)
     if numTimeInds === nothing
         numTimeInds = 1:length(time_vec)
     end
@@ -101,9 +108,16 @@ function plotSensorData!(fig::GLMakie.Figure,numSensor::Sensors,time_vec::Vector
             push!(axs,content)
         end
     end
+    MT = Makie.MathTeXEngine
+    mt_fonts_dir = joinpath(dirname(pathof(MT)), "..", "assets", "fonts", "NewComputerModern")
+
+    set_theme!(fonts = (
+        regular = joinpath(mt_fonts_dir, "NewCM10-Regular.otf"),
+        bold = joinpath(mt_fonts_dir, "NewCM10-Regular.otf")
+    ))
     #@show axs
     for i =1:4
-        lines!(axs[i],time_vec[numTimeInds],numSensor.data[i][numTimeInds.-shiftPlot],label=numLabel)
+        lines!(axs[i],time_vec[numTimeInds],numSensor.data[i][numTimeInds.-shiftPlot],label=numLabel,color=virColor, colormap=:viridis, colorrange=(1,10))
     end
     if legend
         axislegend(axs[i],position=:lb)

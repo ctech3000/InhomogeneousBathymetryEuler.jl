@@ -1,6 +1,6 @@
 using CairoMakie, JLD2, HDF5
 using InhomogeneousBathymetryEuler
-saveFigs = true
+saveFigs = false
 
 data = load("examples/results/plottingScripts/EulerDataSim_noBathyData.jld2")
 sensorss = data["sensorss"]
@@ -19,6 +19,6 @@ fig1 = plotSensorData(sensorss[2],first_period,numLabel="Euler",bathy=false,numT
 Legend(fig1[3,1:2],fig1.content[1],orientation=:horizontal)
 resize!(fig1.scene,(750,550))
 if saveFigs
-    #save("C:\\Users\\chris\\Desktop\\Masterarbeit\\Text\\masterthesis\\clean-math-thesis\\images\\modelComp_noBathy.svg",fig1)
+    save("C:\\Users\\chris\\Desktop\\Masterarbeit\\Text\\masterthesis\\clean-math-thesis\\images\\modelComp_noBathy.svg",fig1)
 end
 fig1

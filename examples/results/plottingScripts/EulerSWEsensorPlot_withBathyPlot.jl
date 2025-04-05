@@ -19,8 +19,8 @@ fiveSecInd = 401
 data_nb = load("examples/results/plottingScripts/EulerDataSim_noBathyData.jld2")
 sensorss_nb = data_nb["sensorss"]
 
-fig1_ = plotSensorData(sensorss_nb[3],first_period,numLabel="no bath.",bathy=false,plotSWE=false,plotExp=false,numTimeInds=collect(fiveSecInd:t_ind_end_first_period))
-plotSensorData!(fig1_,sensorss[1,3],first_period,numLabel="with bath.",numTimeInds=collect(fiveSecInd:t_ind_end_first_period))
+fig1_ = plotSensorData(sensorss_nb[3],first_period,numLabel="no bath.",bathy=false,plotSWE=false,plotExp=false,numTimeInds=collect(fiveSecInd:t_ind_end_first_period),virColors=[1,1])
+plotSensorData!(fig1_,sensorss[1,3],first_period,numLabel="with bath.",numTimeInds=collect(fiveSecInd:t_ind_end_first_period),virColor=9)
 Legend(fig1_[3,1:2],fig1_.content[1],orientation=:horizontal)
 resize!(fig1_.scene,(750,500))
 if saveFigs
@@ -37,9 +37,9 @@ if saveFigs
 end
 fig1
 
-fig2 = plotSensorData(sensorss[1,1],first_period,numLabel=L"direct$$",bathy=true,plotSWE=false,numTimeInds=collect(fiveSecInd:t_ind_end_first_period))
-plotSensorData!(fig2,sensorss[1,2],first_period,numLabel=L"relaxed, $L_D=2λ$",numTimeInds=collect(fiveSecInd:t_ind_end_first_period))
-plotSensorData!(fig2,sensorss[1,3],first_period,numLabel=L"relaxed, $L_D=4λ$",numTimeInds=collect(fiveSecInd:t_ind_end_first_period))
+fig2 = plotSensorData(sensorss[1,1],first_period,numLabel=L"direct$$",bathy=true,plotSWE=false,numTimeInds=collect(fiveSecInd:t_ind_end_first_period),virColors=[1,4,7,9],eulerLinestyle=(:dot,:dense))
+plotSensorData!(fig2,sensorss[1,2],first_period,numLabel=L"relaxed, $L_D=2λ$",numTimeInds=collect(fiveSecInd:t_ind_end_first_period),virColor=7)
+plotSensorData!(fig2,sensorss[1,3],first_period,numLabel=L"relaxed, $L_D=4λ$",numTimeInds=collect(fiveSecInd:t_ind_end_first_period),virColor=9)
 Legend(fig2[3,1:2],fig2.content[1],orientation=:horizontal)
 resize!(fig2.scene,(750,550))
 if saveFigs
@@ -47,7 +47,7 @@ if saveFigs
 end
 fig2
 
-fig3 = plotSensorData(sensorss[1,3],first_period,numLabel="Euler",bathy=true,plotSWE=true,numTimeInds=collect(fiveSecInd:t_ind_end_first_period))
+fig3 = plotSensorData(sensorss[1,3],first_period,numLabel="Euler",bathy=true,plotSWE=true,numTimeInds=collect(fiveSecInd:t_ind_end_first_period),virColors=[1,9])
 Legend(fig3[3,1:2],fig3.content[1],orientation=:horizontal)
 resize!(fig3.scene,(750,550))
 if saveFigs

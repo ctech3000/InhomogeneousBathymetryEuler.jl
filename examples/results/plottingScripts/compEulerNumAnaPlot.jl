@@ -1,6 +1,13 @@
 using JLD2, CairoMakie
 using InhomogeneousBathymetryEuler
-set_theme!(fonts = (; regular = "Liberation Serif", bold = "Liberation Serif Bold"))
+virColors=[1,9]
+MT = Makie.MathTeXEngine
+mt_fonts_dir = joinpath(dirname(pathof(MT)), "..", "assets", "fonts", "NewComputerModern")
+
+set_theme!(fonts = (
+    regular = joinpath(mt_fonts_dir, "NewCM10-Regular.otf"),
+    bold = joinpath(mt_fonts_dir, "NewCM10-Bold.otf")
+))
 function linToCart(i_lin::Integer,N::Integer,M::Integer)
     A = zeros(N,M)
     return CartesianIndices(A)[i_lin].I[end:-1:1]
@@ -44,14 +51,14 @@ errorsMax_4 = [maximum(errorsMax_t_4[idx_f][equi_inds]) for idx_f = 1:nFacs]
 CairoMakie.activate!()
 fig1_ = Figure(size=(700,300))
 #ax11_ = Axis(fig1_[1,1], xlabel="t (s)", ylabel="err", yscale=log10, title="L2")
-ax12_ = Axis(fig1_[1,1], xlabel="t (s)", ylabel="error", yscale=log10,xticks=WilkinsonTicks(6,k_min=5))
+ax12_ = Axis(fig1_[1,1], xlabel=L"$t$\,/s", ylabel="error", yscale=log10,xticks=WilkinsonTicks(6,k_min=5))
 idx_f = 7
 t_inds_f1_ = 1:250
 
 #lines!(ax11_,time_vec[t_inds_f1_],errorsL2_t_2[idx_f][t_inds_f1_],label="L_D=2λ")
-lines!(ax12_,time_vec[t_inds_f1_],errorsMax_t_2[idx_f][t_inds_f1_],label="L_D=2λ")
+lines!(ax12_,time_vec[t_inds_f1_],errorsMax_t_2[idx_f][t_inds_f1_],label=L"L_D=2\lambda",color=virColors[1], colormap=:viridis, colorrange=(1,10))
 #lines!(ax11_,time_vec[t_inds_f1_],errorsL2_t_4[idx_f][t_inds_f1_],label="L_D=4λ")
-lines!(ax12_,time_vec[t_inds_f1_],errorsMax_t_4[idx_f][t_inds_f1_],label="L_D=4λ")
+lines!(ax12_,time_vec[t_inds_f1_],errorsMax_t_4[idx_f][t_inds_f1_],label=L"L_D=4\lambda",color=virColors[2], colormap=:viridis, colorrange=(1,10))
 
 #axislegend(ax11_,position=:lt)
 axislegend(ax12_,position=:rt)
@@ -65,7 +72,7 @@ fig1_
 using GLMakie
 GLMakie.activate!()
 fig2_ = Figure()
-ax1_ = Axis(fig2_[1,1],xlabel="χ",ylabel="η",title = "η on whole surface")
+ax1_ = Axis(fig2_[1,1],xlabel=L"\chi",ylabel=L"\eta",title = L"$\eta$ on Whole Surface")
 t_sl = Slider(fig2_[2, 1], range = eachindex(time_vec), startvalue = 1)
 eta_num_t_2 = lift(t_sl.value) do t
     etas_2[4][t]
@@ -91,9 +98,9 @@ eocsMax_4 = computeEOC(errorsMax_4,Dχs)
 
 CairoMakie.activate!()
 fig1 = Figure(size=(400,230))
-ax1 = Axis(fig1[1,1], xlabel="Δχ (m)", ylabel="relative error",xscale=log10,yscale=log10)
-lines!(ax1,Dχs,errorsMax_2/max_eta,label=L"L_D=2λ")
-lines!(ax1,Dχs,errorsMax_4/max_eta,label=L"L_D=4λ")
+ax1 = Axis(fig1[1,1], xlabel=L"$\Delta \chi$\,/m", ylabel="relative error",xscale=log10,yscale=log10)
+lines!(ax1,Dχs,errorsMax_2/max_eta,label=L"L_D=2\lambda",color=virColors[1], colormap=:viridis, colorrange=(1,10))
+lines!(ax1,Dχs,errorsMax_4/max_eta,label=L"L_D=4\lambda",color=virColors[2], colormap=:viridis, colorrange=(1,10))
 axislegend(ax1,position=:lt)
 if save_figs
     save("C:\\Users\\chris\\Desktop\\Masterarbeit\\Text\\masterthesis\\clean-math-thesis\\images\\anaErrPlot.svg",fig1)
@@ -107,11 +114,12 @@ t_inds_f2 = [51,76,101,125]
 fig2 = Figure(size=(700,450))
 axs = Axis[]
 for i = 1:4
-    push!(axs,Axis(fig2[linToCart(i,2,2)...], xlabel="x (m)", ylabel="η (m)",title="t = $(round(time_vec[t_inds_f2[i]],digits=1))s"))
-    lines!(axs[i],xs,eta_ana[t_inds_f2[i]][end:-1:1],label="η ana.")
-    lines!(axs[i],xs,etas_4[end][t_inds_f2[i]][end:-1:1],label="η num.")
+    push!(axs,Axis(fig2[linToCart(i,2,2)...], xlabel=L"$x$\,/m", ylabel=L"$\eta$\,m",title=L"$t = %$(round(time_vec[t_inds_f2[i]],digits=1))$\,s"))
+    lines!(axs[i],xs,eta_ana[t_inds_f2[i]][end:-1:1],label=L"$\eta$ ana.",color=virColors[1], colormap=:viridis, colorrange=(1,10))
+    lines!(axs[i],xs,etas_4[end][t_inds_f2[i]][end:-1:1],label=L"$\eta$ num.",color=virColors[2], colormap=:viridis, colorrange=(1,10))
     #axislegend(axs[i],position=:lt)
 end
+Legend(fig2[3,1:2],axs[1],orientation=:horizontal)
 if save_figs
     save("C:\\Users\\chris\\Desktop\\Masterarbeit\\Text\\masterthesis\\clean-math-thesis\\images\\anaSurfPlot.svg",fig2)
 end

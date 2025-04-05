@@ -210,13 +210,16 @@ end
 
 # ╔═╡ aa17f115-1e0f-4574-b819-ddd29cf3575d
 begin
-	fig5 = Figure(size=(500,400))
-	ax5 = Axis(fig5[1,1], xlabel= "t (s)",ylabel="η (m)")
-	lines!(ax5,shifted_time,selected_eta[1:end-1],label="measurement")
-	lines!(ax5,shifted_time,reg_eta,label="regular wave")
-	lines!(ax5,shifted_time,irreg_eta,label="irregular wave")
+	savefigure=false
+	fig5 = Figure(size=(500,400),font="CMU")
+	ax5 = Axis(fig5[1,1], xlabel= L"$t$\,/s",ylabel=L"$\eta$\,/m")
+	lines!(ax5,shifted_time,selected_eta[1:end-1],label="measurement",color=1, colormap=:viridis, colorrange=(1,10))
+	lines!(ax5,shifted_time,reg_eta,label="regular wave",color=5, colormap=:viridis, colorrange=(1,10))
+	lines!(ax5,shifted_time,irreg_eta,label="irregular wave",color=9, colormap=:viridis, colorrange=(1,10))
 	axislegend(position = :lt)
-	save("C:/Users/chris/Desktop/Masterarbeit/Text/masterthesis/clean-math-thesis/images/incomingWaves.svg",fig5)
+	if savefigure
+		save("C:/Users/chris/Desktop/Masterarbeit/Text/masterthesis/clean-math-thesis/images/incomingWaves.svg",fig5)
+	end
 	fig5
 end
 
