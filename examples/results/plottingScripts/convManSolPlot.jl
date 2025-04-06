@@ -24,12 +24,12 @@ set_theme!(fonts = (
     bold = joinpath(mt_fonts_dir, "NewCM10-Bold.otf")
 ))
 fig1 = Figure(size=(700,300))
-ax11 = Axis(fig1[1,1],xlabel=L"\Delta \chi",ylabel="error",xscale=log10,yscale=log10,title=L"$$L2 Error")
+ax11 = Axis(fig1[1,1],xlabel=L"h",ylabel="error",xscale=log10,yscale=log10,title=L"$$L2 Error")
 for idx_b = 1:nBaths
     lines!(ax11,Dχs[:,idx_b],errorsL2[:,idx_b],label=baths[idx_b],color=virColors[idx_b], colormap=:viridis, colorrange=(1,10))
 end
 axislegend(ax11,position=:rb)
-ax12 = Axis(fig1[1,2],xlabel=L"\Delta \chi",ylabel="error",xscale=log10,yscale=log10,title=L"$$Maximum Error")
+ax12 = Axis(fig1[1,2],xlabel=L"h",ylabel="error",xscale=log10,yscale=log10,title=L"$$Maximum Error")
 for idx_b = 1:nBaths
     lines!(ax12,Dχs[:,idx_b],errorsMax[:,idx_b],label=baths[idx_b],color=virColors[idx_b], colormap=:viridis, colorrange=(1,10))
 end

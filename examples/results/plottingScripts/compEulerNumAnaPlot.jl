@@ -98,7 +98,7 @@ eocsMax_4 = computeEOC(errorsMax_4,Dχs)
 
 CairoMakie.activate!()
 fig1 = Figure(size=(400,230))
-ax1 = Axis(fig1[1,1], xlabel=L"$\Delta \chi$\,/m", ylabel="relative error",xscale=log10,yscale=log10)
+ax1 = Axis(fig1[1,1], xlabel=L"h", ylabel="relative error",xscale=log10,yscale=log10)
 lines!(ax1,Dχs,errorsMax_2/max_eta,label=L"L_D=2\lambda",color=virColors[1], colormap=:viridis, colorrange=(1,10))
 lines!(ax1,Dχs,errorsMax_4/max_eta,label=L"L_D=4\lambda",color=virColors[2], colormap=:viridis, colorrange=(1,10))
 axislegend(ax1,position=:lt)
