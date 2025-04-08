@@ -1,3 +1,4 @@
+#computes data for the comparison between Euler and SWE against measurements, with bathymetry 
 using InhomogeneousBathymetryEuler 
 using Ferrite, JLD2
 

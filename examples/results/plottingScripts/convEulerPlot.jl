@@ -1,3 +1,4 @@
+# produces figures 13 - 14
 using JLD2, CairoMakie
 using InhomogeneousBathymetryEuler
 

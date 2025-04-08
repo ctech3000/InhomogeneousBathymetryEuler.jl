@@ -1,3 +1,4 @@
+# produces figures 3, 11
 using CairoMakie
 using InhomogeneousBathymetryEuler
 CairoMakie.activate!()

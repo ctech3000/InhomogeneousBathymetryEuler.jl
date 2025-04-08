@@ -1,3 +1,4 @@
+#computes data for the damping test
 using Ferrite, JLD2
 using InhomogeneousBathymetryEuler
 

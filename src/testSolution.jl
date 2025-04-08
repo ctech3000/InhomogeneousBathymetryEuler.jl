@@ -1,8 +1,5 @@
-#= include("transformations.jl")
-include("helpfulFunctions.jl")
-include("inputParameters.jl") =#
-
-
+# contains functions to test whether the restrictions of the PDE are fulfilled
+# (manufactured solutions yield more expressive results)
 
 function computeDerivativeOnBoundary(sol::Matrix{Float64},Dχ::Real,Dσ::Real,χs::Vector,σs::Vector,domain::AbstractDomain,trans::σTransform,boundary::String,derivative::String)
     b_L = domain.b_L

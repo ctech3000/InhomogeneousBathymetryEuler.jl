@@ -1,3 +1,4 @@
+# produces figures 15-17
 using JLD2, CairoMakie
 using InhomogeneousBathymetryEuler
 virColors=[1,9]

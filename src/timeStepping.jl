@@ -1,10 +1,4 @@
-#= using Ferrite
-using ProgressBars
-include("inputParameters.jl")
-include("transformations.jl")
-include("analyticPotential.jl")
-include("assemble.jl")
- =#
+#= contains functions to compute the solution in time =#
 
 function compute_LHS_matrix(K::SparseMatrixCSC, M_T0::SparseMatrixCSC, M_T1::SparseMatrixCSC, M_T2::SparseMatrixCSC, Dt::Real, timeMethod::BackwardDiff)
     return GRAV*K + M_T2 + 3/(2*Dt)*M_T1 + 2/Dt^2*M_T0
@@ -14,11 +8,13 @@ function compute_RHS(g::Vector{Float64},M_T0::SparseMatrixCSC, M_T1::SparseMatri
     return GRAV*g + (2/Dt*M_T1 + 5/Dt^2*M_T0)*phi_curr - (1/(2*Dt)*M_T1 + 4/Dt^2*M_T0)*phi_old + 1/Dt^2*M_T0*phi_oldold
 end
 
+# old, used for dirichlet bc on S_T
 function compute_σ_derivative_on_free_surface(phi::Vector{Float64},Dσ::Real, nχ::Int)
     phi_dσ = 1/Dσ*(-3/2*phi[1:nχ+1] .+ 2*phi[(2-1)*(nχ+1)+1:2*(nχ+1)] .+ -1/2*phi[(3-1)*(nχ+1)+1:3*(nχ+1)])
     return phi_dσ
 end
 
+# old, used for dirichlet bc on S_T
 function compute_new_dirichlet_data(phi_curr::Vector{Float64}, phi_old::Vector{Float64}, domain::DampedDomainProperties, trans::σTransform, χs::Vector{Float64}, Dt::Real,Dσ::Real,nχ::Int)
     phi_surface_old = phi_old[1:nχ+1]
     phi_surface_curr = phi_curr[1:nχ+1]
@@ -41,6 +37,7 @@ function compute_new_dirichlet_data(phi_curr::Vector{Float64}, phi_old::Vector{F
     return phi_surface_new
 end
 
+# gives the dofs on which relaxation is performed after each time step
 function relaxation_dofs_coords(dh::Ferrite.DofHandler, trans::σTransform, domain::RelaxedDampedDomainProperties; apply_full_relaxation::Bool=false)
     node_ids = 1:length(dh.grid.nodes)
     RX_dofs = Int[]
@@ -72,7 +69,6 @@ function apply_relaxation(sol_num::Vector{Float64},t::Real,h::Real,RX_dofs::Vect
         x,z = RX_coords[i]
         sol_ana = analyticPotential(x,z,t,h,wave)
         relaxed_sol[dof] = domain.ramp_RX(x)*sol_num[dof] + (1 - domain.ramp_RX(x))*sol_ana
-        #relaxed_sol[dof] = domain.ramp_RX(x)*sol_num[dof] + (1 - domain.ramp_RX(x))*0
     end
     return relaxed_sol
 end
@@ -81,6 +77,7 @@ function apply_relaxation(sol_num::Vector{Float64},t::Real,h::Real,RX_dofs::Vect
     return sol_num
 end
 
+# computes eta as time derivative of velocity potential for a damped domain
 function compute_eta(phi_new::Vector{Float64}, phi_curr::Vector{Float64}, phi_old::Vector{Float64}, domain::Union{DampedDomainProperties,RelaxedDampedDomainProperties}, trans::σTransform,Dt::Real,nχ::Int,χs::Vector{Float64}, dh::DofHandler)
     phi_nodes_old = evaluate_at_grid_nodes(dh,phi_old,:phi)
     phi_nodes_curr = evaluate_at_grid_nodes(dh,phi_curr,:phi)
@@ -95,6 +92,7 @@ function compute_eta(phi_new::Vector{Float64}, phi_curr::Vector{Float64}, phi_ol
     return eta_new
 end
 
+# computes eta as time derivative of velocity potential for an undamped domain
 function compute_eta(phi_new::Vector{Float64}, phi_curr::Vector{Float64}, phi_old::Vector{Float64}, domain::DomainProperties, trans::σTransform,Dt::Real,nχ::Int,χs::Vector{Float64}, dh::DofHandler)
     phi_nodes_old = evaluate_at_grid_nodes(dh,phi_old,:phi)
     phi_nodes_curr = evaluate_at_grid_nodes(dh,phi_curr,:phi)
@@ -108,6 +106,7 @@ function compute_eta(phi_new::Vector{Float64}, phi_curr::Vector{Float64}, phi_ol
     return eta_new
 end
 
+# gives indices grid points closest to x_L and x_D (used if phi is saved)
 function find_physical_ind(domain::AbstractDomain,trans::σTransform,χs::Vector{Float64})
     χ_L = trans.χ(domain.x_L)
     if domain isa DomainProperties
@@ -120,6 +119,7 @@ function find_physical_ind(domain::AbstractDomain,trans::σTransform,χs::Vector
     return idx_χL, idx_χD
 end
 
+# computes mask to restrict solutions to physical domain (used for optional energy computation) 
 function computePhysDomainMask(dh::DofHandler, trans::σTransform, domain::AbstractDomain, Dχ::Real)
     Dx = -trans.x(Dχ)
     if domain isa DomainProperties
@@ -153,10 +153,12 @@ function computePhysDomainMask(dh::DofHandler, trans::σTransform, domain::Abstr
     
 end
 
+# computes total energy in physical domain
 function computeEnergy(phi::Vector{Float64},eta::Vector{Float64},K::SparseMatrixCSC,M_T0::SparseMatrixCSC)
     return 1/2*transpose(phi)*K*phi + 1/2*GRAV*transpose(eta)*M_T0*eta
 end
 
+# computes solution for each timestep
 function solve_all_timesteps(LHS_matrix::SparseMatrixCSC, LHS_matrix_init::SparseMatrixCSC, K_init::SparseMatrixCSC, M_T0::SparseMatrixCSC, M_T1::SparseMatrixCSC, domain::AbstractDomain, trans::σTransform, χs::Vector{Float64}, σs::Vector{Float64}, time_vec::Vector{Float64}, timeMethod::AbstractTimeSteppingMethod, facetvalues::FacetValues, dh::DofHandler, ch::ConstraintHandler, outflow::OutflowBC, D_inflow_boundary::Vector{Vector{Float64}}; save_phi::Union{Bool,Tuple{Int64, Int64, Int64}}=false, apply_full_relaxation::Bool=false, energy::Union{Vector{Float64},Nothing}=nothing)
     nχ = length(χs) - 1
     nσ = length(σs) - 1
@@ -171,11 +173,12 @@ function solve_all_timesteps(LHS_matrix::SparseMatrixCSC, LHS_matrix_init::Spars
     LHS_lu = lu(LHS_matrix)
     RX_dofs, RX_coords = relaxation_dofs_coords(dh,trans,domain,apply_full_relaxation=apply_full_relaxation)
 
+    # optional preparation of saving of phi
     if save_phi !== false
         if isa(save_phi,Bool)
             all_phis = Vector{Matrix{Float64}}(undef,nt)
             all_phis[1] = zeros(Float64,((nχ+1),(nσ+1)))
-        else
+        else    # if phi is supposed to be sampled (decrease file size)
             skip_χ, skip_σ, skip_t = save_phi 
             idx_χL, idx_χD = find_physical_ind(domain,trans,χs)
             nχ_phys = idx_χL - idx_χD 
@@ -185,11 +188,12 @@ function solve_all_timesteps(LHS_matrix::SparseMatrixCSC, LHS_matrix_init::Spars
             all_phis[1] = zeros(Float64,((round(Integer,nχ_phys/skip_χ+1)),(round(Integer,nσ/skip_σ+1))))
         end
     end
-    if !isnothing(energy)
+    if !isnothing(energy)   
         push!(energy,0.0)
         phiMask, etaMask =  computePhysDomainMask(dh,trans,domain,χs[2]-χs[1])
     end
     
+    # time loop
     for (t_idx,t_p) in ProgressBar(enumerate(time_vec[2:end]))
         g = assemble_g_global(facetvalues,dh,D_inflow_boundary,trans,domain.wave,t_p)
         RHS = compute_RHS(g,M_T0,M_T1,phi_curr,phi_old,phi_oldold,Dt,timeMethod)
@@ -206,7 +210,7 @@ function solve_all_timesteps(LHS_matrix::SparseMatrixCSC, LHS_matrix_init::Spars
                 phi_nodes = evaluate_at_grid_nodes(dh,phi_new,:phi)
                 all_phis[t_idx+1] = reshape(phi_nodes,(nχ+1,nσ+1))
             end
-        else
+        else    # sampled saving
             if round(t_idx/skip_t) == t_idx/skip_t
                 phi_nodes_mat = reshape(evaluate_at_grid_nodes(dh,phi_new,:phi),(nχ+1,nσ+1))
                 all_phis[round(Integer,t_idx/skip_t)+1] = phi_nodes_mat[idx_χD:skip_χ:idx_χL,1:skip_σ:end]
@@ -214,7 +218,7 @@ function solve_all_timesteps(LHS_matrix::SparseMatrixCSC, LHS_matrix_init::Spars
             end
         end
 
-        if !isnothing(energy)
+        if !isnothing(energy)   # computation of total energy
             eta_coeff = coefficientVector(dh,eta_new)
             eta_coeff_phys = eta_coeff.*etaMask #restrict phi and eta to (almost only) physical domain
             phi_coeff_phys = phi_new.*phiMask
@@ -222,6 +226,7 @@ function solve_all_timesteps(LHS_matrix::SparseMatrixCSC, LHS_matrix_init::Spars
             push!(energy,energy_new)
         end
 
+        # update values
         phi_oldold = phi_old
         phi_old = phi_curr
         phi_curr = phi_new
@@ -234,6 +239,7 @@ function solve_all_timesteps(LHS_matrix::SparseMatrixCSC, LHS_matrix_init::Spars
     end
 end;
 
+# if sensor data is supposed to be simulated
 function solve_all_timesteps!(sensors::Sensors,LHS_matrix::SparseMatrixCSC, LHS_matrix_init::SparseMatrixCSC, K_init::SparseMatrixCSC, M_T0::SparseMatrixCSC, M_T1::SparseMatrixCSC, domain::AbstractDomain, trans::σTransform, χs::Vector{Float64}, σs::Vector{Float64}, time_vec::Vector{Float64}, timeMethod::AbstractTimeSteppingMethod, facetvalues::FacetValues, dh::DofHandler, ch::ConstraintHandler, outflow::OutflowBC, D_inflow_boundary::Vector{Vector{Float64}}; save_phi::Union{Bool,Tuple{Int64, Int64, Int64}}=false, apply_full_relaxation::Bool=false)
     if isa(save_phi,Tuple{Int64, Int64, Int64}) || save_phi
         all_etas, all_phis = solve_all_timesteps(LHS_matrix, LHS_matrix_init,K_init, M_T0, M_T1, domain, trans, χs, σs, time_vec, timeMethod, facetvalues, dh, ch, outflow, D_inflow_boundary, save_phi=save_phi, apply_full_relaxation=apply_full_relaxation);

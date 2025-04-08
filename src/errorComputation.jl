@@ -1,3 +1,5 @@
+# contains functions to compute errors for the computed velocity potential and surface displacement 
+# (see e.g. convEulerPlot.jl in Plotting scripts)
 function computeError(u_ana::Union{Matrix{Float64},Vector{Float64}}, u_num::Union{Matrix{Float64},Vector{Float64}}, Dχ::Real;norm::String="L2",maxPos::Union{Vector{Int64},Nothing}=nothing)
     if norm == "L2"
         return computeErrorL2(u_ana,u_num, Dχ)

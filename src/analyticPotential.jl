@@ -1,6 +1,4 @@
-#= using Interpolations
-include("inputParameters.jl")
-include("transformations.jl") =#
+
 
 #=  contains functions to compute the analytic velocity potential for a simple wave
     physical or transformed coordinates (eg analyticPotential vs transformedAnalyticPotential)

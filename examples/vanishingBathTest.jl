@@ -89,7 +89,8 @@ rowsize!(fig2.layout,2,Relative(1/5))
 fig2
 
 fig3 = Figure()
-ax3 = Axis(fig3[1,1],xlabel="bHeight",ylabel="η",title = (@sprintf("max η at t=%.2f",time_vec[t_ind])))
+
+ax3 = Axis(fig3[1,1],xlabel="bHeight",ylabel="η",title = (@sprintf("max η at time point")))
 t_sl = Slider(fig3[2, 1], range = time_ind, startvalue = 1)
 data = lift(t_sl.value) do t
     [maximum(all_etas_b[b_ind][t]) for b_ind = eachindex(bHeights)]

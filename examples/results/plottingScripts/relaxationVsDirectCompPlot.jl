@@ -1,5 +1,4 @@
-# redo with amp = 0.005
-
+# produces figures 18 - 20
 using JLD2, CairoMakie
 using InhomogeneousBathymetryEuler
 virColors=[1,9]
@@ -16,8 +15,7 @@ function linToCart(i_lin::Integer,N::Integer,M::Integer)
 end
 saveFigs = false
 
-#data = load("examples/results/plottingScripts/relaxationVsDirectCompDataMoreShifts.jld2")
-data = load("examples/results/plottingScripts/relaxationVsDirectCompData2.jld2")
+data = load("examples/results/plottingScripts/relaxationVsDirectCompData.jld2")
 etas = data["etas"]
 energies = data["energies"]
 wave = data["wave"]

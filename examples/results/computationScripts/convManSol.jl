@@ -1,3 +1,4 @@
+#computes data for the convergence computation with manufactured solution with the Gaussian bathymetry
 using InhomogeneousBathymetryEuler
 using Ferrite, JLD2
 

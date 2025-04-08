@@ -1,8 +1,4 @@
-#= using Ferrite
-include("inputParameters.jl")
-include("domainDiscretization.jl")
-include("transformations.jl")
-include("analyticPotential.jl") =#
+#= contains functions to assemble the FEM matrices =#
 
 #= function to set dirichlet bc from discretized function on nodes =#
 function dirichlet_from_discretized_data(grid::Ferrite.AbstractGrid, field::Symbol, boundary_name::String, dirichlet_data::Vector{Float64})
@@ -29,38 +25,26 @@ function assemble_K_element!(Ke::Matrix, cell::CellCache, cellvalues::CellValues
     node_coords = getcoordinates(cell)
     q_point_coords = spatial_coordinate.((cellvalues,), collect(1:n_q_points),(node_coords,))
 
+    # iterate over quadrature points
     for q_point in 1:n_q_points
         χ, σ = q_point_coords[q_point]
-        #= fac1 = σ/(χ+2)
-        fac2 = σ^2/(χ+2)^2 + 1/(1/2*χ+1)^2 =#
         dΩ = getdetJdV(cellvalues, q_point)
-        b = eval_bath(trans.tBath,χ,0)
-        d_χ_b = eval_bath(trans.tBath,χ,1)
-        D = abs(b_L*b)
-        #@show fac1 - (σ*d_χ_b)/(b_L^2*b), fac2 - (((σ*d_χ_b)/(b_L*b))^2+1/b^2)
-        #@show χ, σ, b, d_χ_b, D
-        #= B_point = Be[q_point]
-        B_tilde_point = B_tilde_e[q_point]
-        D_point = De[q_point] =#
         B_point = Be[q_point]
         B_tilde_point = B_tilde_e[q_point]
         D_point = De[q_point]
-#=         showIfBigDif(B_point, σ*d_χ_b/b, 0.01)
-        showIfBigDif(B_tilde_point, (σ*d_χ_b/b)^2+b_L^2/b^2, 0.001)
-        showIfBigDif(D_point, D, 0.01) =#
-        #@show (σ*d_χ_b)/(b_L^2*b) (((σ*d_χ_b)/(b_L*b))^2+1/b^2)
+        # for each base function in qpoint add summand
         for j in 1:n_basefuncs
             Nj_dχ, Nj_dσ  = shape_gradient(cellvalues, q_point, j)
             for i in 1:n_basefuncs
                 Ni_dχ, Ni_dσ = shape_gradient(cellvalues, q_point, i)
-                #Ke[j, i] += (Ni_dχ*Nj_dχ - B_point*Ni_dχ*Nj_dσ - B_point*Ni_dσ*Nj_dχ  + B_tilde_point*Ni_dσ*Nj_dσ)*D_point*dΩ
-                Ke[i,j] += (1/b_L^2*Ni_dχ*Nj_dχ - (σ*d_χ_b)/(b_L^2*b)*(Ni_dσ*Nj_dχ+Ni_dχ*Nj_dσ) + (((σ*d_χ_b)/(b_L*b))^2+1/b^2)*Ni_dσ*Nj_dσ)*D*dΩ
+                Ke[j, i] += 1/b_L^2*(Ni_dχ*Nj_dχ - B_point*Ni_dχ*Nj_dσ - B_point*Ni_dσ*Nj_dχ  + B_tilde_point*Ni_dσ*Nj_dσ)*D_point*dΩ
             end
         end
     end
     return Ke
 end
 
+# gradient/stiffness matrix 
 function assemble_K_global(cellvalues::CellValues, dh::DofHandler, domain::AbstractDomain, B_domain::Vector{Vector{Float64}}, B_tilde_domain::Vector{Vector{Float64}}, D_domain::Vector{Vector{Float64}}, trans::σTransform)
     K = allocate_matrix(dh)
     n_basefuncs = getnbasefunctions(cellvalues)
@@ -74,7 +58,6 @@ function assemble_K_global(cellvalues::CellValues, dh::DofHandler, domain::Abstr
         assemble_K_element!(Ke, cell, cellvalues, Be, B_tilde_e, De, trans)
         assemble!(assembler, celldofs(cell), Ke)
     end
-    #K *= 1/domain.b_L^2
     return K
 end
 
@@ -109,6 +92,7 @@ function assemble_Ms_element!(M_T0e::Matrix, M_T1e::Matrix, M_T2e::Matrix, De::V
 
 end
 
+# boundary integrals on S_T
 function assemble_Ms_global(facetvalues::FacetValues, dh::DofHandler, D_surface_boundary::Vector{Vector{Float64}}, domain::AbstractDomain,trans::σTransform)
     M_T0 = allocate_matrix(dh)
     M_T1 = allocate_matrix(dh)
@@ -152,6 +136,7 @@ function assemble_g_element!(fe::Vector, facetvalues::FacetValues, facet::FacetC
     end
 end
 
+# inserts values into a coefficient vector at the dof corresponding to facet
 function insert_into_f!(f::Vector, fe::Vector, facetvalues::FacetValues,facet::FacetCache)
     dofs = celldofs(facet)
     for i in 1:getnbasefunctions(facetvalues)
@@ -159,6 +144,7 @@ function insert_into_f!(f::Vector, fe::Vector, facetvalues::FacetValues,facet::F
     end
 end
 
+# boundary integral over S_L
 function assemble_g_global(facetvalues::FacetValues, dh::DofHandler, D_inflow_boundary::Vector{Vector{Float64}}, trans::σTransform, wave::AbstractWave, t_p::Real)
     n_basefuncs = getnbasefunctions(facetvalues)
     ge = zeros(n_basefuncs)
@@ -172,21 +158,7 @@ function assemble_g_global(facetvalues::FacetValues, dh::DofHandler, D_inflow_bo
     return g
 end
 
-function init_K_g(cellvalues::CellValues, facetvalues::FacetValues, dh::DofHandler,domain::AbstractDomain,B_domain::Vector{Vector{Float64}}, B_tilde_domain::Vector{Vector{Float64}}, D_domain::Vector{Vector{Float64}}, D_inflow_boundary::Vector{Vector{Float64}}, trans::σTransform, χs::Vector{T}) where T<:Real
-    K = assemble_K_global(cellvalues,dh,domain,B_domain,B_tilde_domain,D_domain,trans)
-    g = assemble_g_global(facetvalues,dh,D_inflow_boundary,trans,domain.wave,0.0)
-    K_init = deepcopy(K)
-
-    ch = ConstraintHandler(dh)
-    phi_surface_curr1 = transformedAnalyticPotential(χs,0*χs,0.0,-domain.b_L,domain.wave,trans)
-    dbc = dirichlet_from_discretized_data(dh.grid, :phi, "bottom", phi_surface_curr1) # "bottom", because in transformed domain coordinates are flipped
-    add!(ch, dbc);
-    close!(ch)
-    apply!(K,g,ch)
-
-    return K, K_init, ch
-end
-
+# compute K and Ms, apply Dirichlet b.c. if needed
 function init_K_M(cellvalues::CellValues, facetvalues::FacetValues, dh::DofHandler,domain::AbstractDomain,B_domain::Vector{Vector{Float64}}, B_tilde_domain::Vector{Vector{Float64}}, D_domain::Vector{Vector{Float64}}, D_inflow_boundary::Vector{Vector{Float64}}, D_surface_boundary::Vector{Vector{Float64}}, trans::σTransform, outflow::OutflowBC, timeMethod::AbstractTimeSteppingMethod, time_vec::Vector, nσ::Int)
     Dt = time_vec[2] - time_vec[1]
     K = assemble_K_global(cellvalues,dh,domain,B_domain,B_tilde_domain,D_domain,trans)
@@ -216,8 +188,8 @@ end
 
 #= function to apply Dirichlet data on prescribed dofs. 
     Doesn't alter K, since the corresponding rows/cols are already zeroed
-    after first use of "apply!"
-    (code stolen from ConstraintHandler.jl) =#
+    after first use of "apply!". 
+    (code adapted from Ferrites ConstraintHandler.jl) =#
 function apply_dirichlet!(f::Vector,K::SparseMatrixCSC,dirichlet_data::Vector,ch::ConstraintHandler)
     m = meandiag(K)
     for i in 1:length(dirichlet_data)

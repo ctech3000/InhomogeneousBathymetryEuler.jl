@@ -1,7 +1,4 @@
-#= using Ferrite
-include("inputParameters.jl")
-include("transformations.jl")
- =#
+# contains fuctions to discretize the domain
 function side_idx_to_node_number(side_idx::Int)
     if side_idx == 1
         return [1,2]

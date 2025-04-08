@@ -1,3 +1,4 @@
+# produces figures 2
 using CairoMakie, DelimitedFiles
 
 CairoMakie.activate!(type="svg")

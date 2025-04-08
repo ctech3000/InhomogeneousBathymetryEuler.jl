@@ -1,3 +1,4 @@
+#produces figure 21 
 using CairoMakie, JLD2, HDF5
 using InhomogeneousBathymetryEuler
 saveFigs = false

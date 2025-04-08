@@ -1,4 +1,5 @@
-
+#= contains plotSensorData to plot the simulated Euler and SWE along with real measurement
+ and plotSurfaceOverTime to plot surface (in transformed domain) interactively over time=#
 
 function linToCart(i_lin::Integer,N::Integer,M::Integer)
     A = zeros(N,M)
@@ -115,7 +116,6 @@ function plotSensorData!(fig::GLMakie.Figure,numSensor::Sensors,time_vec::Vector
         regular = joinpath(mt_fonts_dir, "NewCM10-Regular.otf"),
         bold = joinpath(mt_fonts_dir, "NewCM10-Regular.otf")
     ))
-    #@show axs
     for i =1:4
         lines!(axs[i],time_vec[numTimeInds],numSensor.data[i][numTimeInds.-shiftPlot],label=numLabel,color=virColor, colormap=:viridis, colorrange=(1,10))
     end
@@ -138,7 +138,7 @@ function plotSurfaceOverTime(eta::Vector{Vector{Float64}},time_vec::Vector{Float
     return fig
 end
 
-function plotSurfaceOverTime!(fig::GLMakie.Figure,eta::Vector{Vector{Float64}},time_vec::Vector{Float64},χs::Vector{Float64},label::String)
+function plotSurfaceOverTime!(fig::GLMakie.Figure,eta::Vector{Vector{Float64}},χs::Vector{Float64},label::String)
     for leg in fig.content 
         if  leg isa Legend
             delete!(leg)

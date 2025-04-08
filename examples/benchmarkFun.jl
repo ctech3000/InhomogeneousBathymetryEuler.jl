@@ -1,3 +1,4 @@
+# benchmarks different LES solvers
 using InhomogeneousBathymetryEuler, Ferrite, LinearAlgebra, BenchmarkTools, SparseArrays, IterativeSolvers
 
 function plain(LHS::SparseMatrixCSC{Float64, Int64}, RHS::Vector{Float64})

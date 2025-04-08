@@ -1,3 +1,5 @@
+# contains functions to conduct manufactured solution test (see e.g. convManSol.jl in computationScripts)
+
 struct TrueSolution
     u_0::Function
     u_0_dx::Function
@@ -5,6 +7,7 @@ struct TrueSolution
     f_0::Function
 end
 
+# laplacian correction term
 function assemble_f_global(cellvalues::CellValues, dh::DofHandler, B_domain::Vector{Vector{Float64}}, B_tilde_domain::Vector{Vector{Float64}}, D_domain::Vector{Vector{Float64}}, trans::σTransform, u::TrueSolution)
     n_basefuncs = getnbasefunctions(cellvalues)
     fe = zeros(n_basefuncs)
@@ -42,6 +45,7 @@ function assemble_f_element!(fe::Vector, cellvalues::CellValues, cell::CellCache
     end
 end
 
+# inserts values into a coefficient vector at the dof corresponding to cell
 function insert_into_f!(f::Vector, fe::Vector, cellvalues::CellValues, cell::CellCache)
     dofs = celldofs(cell)
     for i in 1:getnbasefunctions(cellvalues)
@@ -49,6 +53,7 @@ function insert_into_f!(f::Vector, fe::Vector, cellvalues::CellValues, cell::Cel
     end
 end
 
+# S_L correction term
 function assemble_g_global(facetvalues::FacetValues, dh::DofHandler, D_inflow_boundary::Vector{Vector{Float64}}, trans::σTransform, u::TrueSolution)
     n_basefuncs = getnbasefunctions(facetvalues)
     ge = zeros(n_basefuncs)
@@ -82,6 +87,7 @@ function assemble_g_element!(ge::Vector, facetvalues::FacetValues, facet::FacetC
     end
 end
 
+# S_T correction term (can also be computed by multiplying M_T matrices with coefficient vector of boundary data)
 function assemble_h_global(facetvalues::FacetValues, dh::DofHandler, trans::σTransform, u::TrueSolution)
     n_basefuncs = getnbasefunctions(facetvalues)
     he = zeros(n_basefuncs)
@@ -114,6 +120,7 @@ function assemble_h_element!(he::Vector, facetvalues::FacetValues, facet::FacetC
     end
 end
 
+# S_B correction term
 function assemble_l_global(facetvalues::FacetValues, dh::DofHandler, domain::AbstractDomain, trans::σTransform, u::TrueSolution)
     n_basefuncs = getnbasefunctions(facetvalues)
     le = zeros(n_basefuncs)
@@ -149,6 +156,7 @@ end
 
 
 # https://github.com/Ferrite-FEM/Ferrite.jl/discussions/788
+# used to compute coefficient vector for a function
 function vertexdofs(dh::DofHandler, vertexid::VertexIndex)
 
     cellid, lvidx = vertexid
@@ -215,105 +223,6 @@ function coefficientVector(dh::Ferrite.DofHandler, valsSurface::Vector{Float64})
         coeff[dof] = valsSurface[idx]
     end
     return coeff
-end
-
-function assemble_f_global_alt(cellvalues::CellValues, dh::DofHandler, D_domain::Vector{Vector{Float64}}, trans::σTransform, u::TrueSolution)
-    K = allocate_matrix(dh)
-    n_basefuncs = getnbasefunctions(cellvalues)
-    Ke = zeros(n_basefuncs, n_basefuncs)
-    assembler = start_assemble(K)
-    for cell in CellIterator(dh)
-        reinit!(cellvalues, cell)
-        De = D_domain[cellid(cell)]
-        assemble_f_element_alt!(Ke, cell, cellvalues, De, trans)
-        assemble!(assembler, celldofs(cell), Ke)
-    end
-    f_coeff = coefficientVector(dh,u.f_0,trans)
-    return f = K*f_coeff
-end
-
-function assemble_f_element_alt!(Ke::Matrix, cell::CellCache, cellvalues::CellValues, De::Vector, trans::σTransform)
-    fill!(Ke,0)
-    n_basefuncs = getnbasefunctions(cellvalues)
-    n_q_points = getnquadpoints(cellvalues)
-    for q_point = 1:n_q_points
-        dΩ = getdetJdV(cellvalues, q_point)
-        D = De[q_point]
-        for j in 1:n_basefuncs
-            Nj= shape_value(cellvalues, q_point, j)
-            for i in 1:n_basefuncs
-                Ni = shape_value(cellvalues, q_point, i)
-                Ke[i,j] += Ni*Nj*D*dΩ
-            end
-        end
-    end
-end
-
-function assemble_manufactured_global(cellvalues::CellValues, facetvalues::FacetValues, dh::DofHandler, B_domain::Vector{Vector{Float64}}, B_tilde_domain::Vector{Vector{Float64}}, D_domain::Vector{Vector{Float64}}, trans::σTransform, u::TrueSolution)
-    b_L = trans.tBath.vals[end]
-    n_basefuncs = getnbasefunctions(cellvalues)
-    RHSe = zeros(n_basefuncs)
-    RHS = zeros(ndofs(dh))
-    fe = zeros(n_basefuncs)
-    ge = zeros(n_basefuncs)
-    he = zeros(n_basefuncs)
-    K = allocate_matrix(dh)
-    Ke = zeros(n_basefuncs, n_basefuncs)
-
-    assembler = start_assemble(K,RHS)
-    for (cellcount,cell) in enumerate(CellIterator(dh))
-        reinit!(cellvalues, cell)
-        Be = B_domain[cellid(cell)]
-        B_tilde_e = B_tilde_domain[cellid(cell)]
-        De = D_domain[cellid(cell)]
-        assemble_K_element!(Ke, cell, cellvalues, Be, B_tilde_e, De, trans)
-        assemble_f_element!(fe, cellvalues, cell, De, trans, u)
-
-        node_coords = getcoordinates(cell)
-        n_q_points = getnquadpoints(facetvalues)
-        if (cellcount, 2) in getfacetset(dh.grid,"right")
-            fill!(ge,0.0)
-            reinit!(facetvalues, cell, 2)
-            De = abs(b_L)*ones(Float64,getnquadpoints(facetvalues))
-
-            for q_point in 1:n_q_points
-                dS = getdetJdV(facetvalues, q_point)
-                D_point = De[q_point]
-                q_point_coords = spatial_coordinate(facetvalues, q_point, node_coords)
-                x = trans.x(q_point_coords[1])
-                z = trans.z(q_point_coords...)
-                g_point = -u.u_0_dx(x, z)
-                for i in 1:n_basefuncs
-                    Ni = shape_value(facetvalues, q_point, i)
-                    ge[i] += (Ni * g_point * D_point) * dS
-                end
-            end
-        else
-            fill!(ge,0.0)
-        end
-        if (cellcount, 1) in getfacetset(dh.grid,"bottom")
-            fill!(he,0.0)
-            reinit!(facetvalues, cell, 1)
-            De = abs(b_L)*ones(Float64,getnquadpoints(facetvalues))
-            for q_point in 1:n_q_points
-                dS = getdetJdV(facetvalues, q_point)
-                q_point_coords = spatial_coordinate(facetvalues, q_point, node_coords)
-                D_point = De[q_point]
-                x = trans.x(q_point_coords[1])
-                z = trans.z(q_point_coords...)
-                h_point = u.u_0_dz(x, z)
-                for i in 1:n_basefuncs
-                    Ni = shape_value(facetvalues, q_point, i)
-                    he[i] += (Ni * h_point * D_point) * dS
-                end
-            end
-        else
-            fill!(he,0.0)
-        end
-        RHSe = fe + ge + he
-        assemble!(assembler, celldofs(cell), Ke, RHSe)
-    end
-    return K, RHS
 end
 
 function computeBathNormal(x::Real, domain::AbstractDomain)

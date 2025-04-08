@@ -1,6 +1,4 @@
-#= using Ferrite
-include("inputParameters.jl")
-include("helpfulFunctions.jl") =#
+#= contains functions to compute σ-transformation values used in integrals =#
 
 struct σTransform
     x::Function
@@ -23,7 +21,7 @@ function σTransform(domain::AbstractDomain)
 end
 
 #= function to compute B, B_tilde and D on quadrature points of every cell as well
-    as of every facet belonging to the inflow boundary on which a Neumann BC
+    as of every facet belonging to the boundaries on which a Neumann BC
     is prescribed.
     B and B_tilde are additional factors resulting from σ-transforming
     derivatives. D is the determinant of the jacobian of the σ-

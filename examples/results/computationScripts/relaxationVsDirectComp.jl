@@ -80,5 +80,5 @@ for idx_s = eachindex(gauss_shifts)
 end
 
 time_vec = collect(LinRange(0,T,nt))
-jldsave("examples/results/plottingScripts/relaxationVsDirectCompData2.jld2";etas,energies,Dχs,Dσs,Dts,domains,wave,transs,time_vec,χss,gauss_shifts) 
+jldsave("examples/results/plottingScripts/relaxationVsDirectCompData.jld2";etas,energies,Dχs,Dσs,Dts,domains,wave,transs,time_vec,χss,gauss_shifts) 
 

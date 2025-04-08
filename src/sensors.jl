@@ -1,3 +1,4 @@
+#= contains functions to simulate sensor data from computed surface displacement =#
 mutable struct Sensors
     sensors_pos_x::Vector{Float64}
     sensors_pos_χ::Vector{Float64}

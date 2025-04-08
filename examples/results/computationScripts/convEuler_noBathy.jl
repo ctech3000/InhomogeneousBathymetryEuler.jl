@@ -1,3 +1,4 @@
+#computes data for the convergence computation of the simulation without bathymetry
 using Ferrite, JLD2
 using InhomogeneousBathymetryEuler
 

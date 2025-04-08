@@ -1,5 +1,5 @@
-#= using Interpolations
-include("helpfulFunctions.jl") =#
+#= contians definition of input parameters: wave, bathymetry, domain (i.e. undamped, damped, damped&relaxed),
+   time-stepping method, outflow bc =#
 
 abstract type AbstractWave end
 
@@ -22,19 +22,12 @@ function SimpleWave(amp::Real,freq::Real,phase::Real;hasFadeIn=true,inflowDepth:
     return SimpleWave(amp, freq, phase, fadeIn, hasFadeIn,waveNumberAtInflow)
 end
 
+# wave parameters from experiment
 function SimpleWave(;kwargs...) 
-    amp = 0.0053740783
-    freq = 2.199114857512855
-    phase = 0
+    amp = 0.005
+    freq = 0.35*2*pi
+    phase = 5.68
     return SimpleWave(amp, freq, phase;kwargs...)
-end
-
-function SimpleWave(str::String)
-    if str == "noFadeIn"
-        return SimpleWave(0.0053740783,2.199114857512855,2.7,hasFadeIn=false)
-    elseif str == "fadeIn"
-        return SimpleWave()
-    end
 end
 
 struct IrregWave <: AbstractWave
@@ -66,6 +59,7 @@ function IrregWave(amps::Vector{T},freqs::Vector{T},phases::Vector{T};hasFadeIn:
     return IrregWave(waveList,nComponents,dom_amp,dom_freq,fadeIn,hasFadeIn)
 end
 
+# reads wave parameters acquired from sensor data with waveDataFromSensorData_pluto.jl
 function IrregWave(filename::String;kwargs...)
     d = JLD2.load(filename)
     amps = d["amp_save"]
@@ -105,15 +99,21 @@ function Bathymetry(points::Vector{T1},vals::Vector{T2}) where T1 <:Real where T
 end
 
 function Bathymetry(points::Vector{T}, type::String; kwargs...) where T<:Real
-    if type == "Gauss"
+    if type == "Gauss"      # guassian-like bath form experiment
         return GaussBathymetry(points; kwargs...)
-    elseif type == "Ramp"
+    elseif type == "Ramp"   # linear ramp bath
         return RampBathymetry(points; kwargs...)
-    elseif type == "TrueGauss"
+    elseif type == "TrueGauss"      # true gaussian bathymetry
         return TrueGaussBathymetry(points;kwargs...)
+    elseif type == "Flat"       # flat bathymetry
+        return FlatBathymetry(points;kwargs...)
     else
         print("Error in Bathymetry: type not valid!")
     end
+end
+
+function FlatBathymetry(points::Vector{T};depth::Real=-0.3) where T<:Real
+    return Bathymetry(points,depth*ones(Float64,length(points)))
 end
 
 function TrueGaussBathymetry(points::Vector{T}; shift::Real=2.5, depth::Real=-0.3, bHeight::Real=0.2,sigma::Real=-0.2) where T<:Real
@@ -137,7 +137,6 @@ function GaussBathymetry(points::Vector{T}; shift::Real=2.5, depth::Real=-0.3, b
 end
 
 function eval_bath(bath::Bathymetry, x::Real, der::Int=0)
-    #x=clamp(x,minimum(bath.points),maximum(bath.points))
     if der == 0
         return bath.vals_func(x)
     elseif der == 1
@@ -211,7 +210,6 @@ function computeDampingFunction(x_L::Real, x_D::Real, x_R::Real, wave::AbstractW
     λ = 2*pi/computeWavenumber(freq,b_L)
     μ₀ = -GRAV*log(0.5*10^-5)/(2*freq*L)*sqrt(λ/GRAV)
     μ_D(x) = x<x_D ? 0.0 : μ₀*sqrt(GRAV/λ)*(-2*((x-x_D)/L)^3 + 3*((x-x_D)/L)^2)
-    #μ_D(x) = x<x_D ? 0.0 : Float64(freq*((x-x_D)/(x_R-x_D))^2)
     return μ_D
 end
 
