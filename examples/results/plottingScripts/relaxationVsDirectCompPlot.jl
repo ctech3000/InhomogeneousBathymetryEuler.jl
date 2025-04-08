@@ -104,8 +104,9 @@ end =#
 
 fig3 = Figure(size=(600,250))
 ax3 = Axis(fig3[1,1:2],xlabel=L"$x_G$\,/m",ylabel=L"Amplitude\,/m$$",xticks=WilkinsonTicks(6,k_min=4))
-label_ad = ["Direct Generation",nothing,"Relaxed Generation"]
-for (i,idx_w) = enumerate([1,3])
+label_ad = ["Direct Generation",nothing,L"x_{RX}=2\lambda",L"x_{RX}=4\lambda"]
+virColors=[1,5,9]
+for (i,idx_w) = enumerate([1,3,4])
     lines!(ax3,gauss_shifts,max_eta_t_5behind_gauss[:,idx_w],label=label_ad[idx_w],color=virColors[i], colormap=:viridis, colorrange=(1,10))
 end
 Legend(fig3[1,3],ax3)
