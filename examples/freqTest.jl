@@ -102,6 +102,11 @@ md"""
 Sensor input into Simulation:
 """
 
+# ╔═╡ 1ecbc240-6615-4249-8032-f569f1fb8524
+begin 
+	lines(selected_time,selected_eta)
+end
+
 # ╔═╡ 5f652052-e23b-409d-8776-074e13a49699
 begin
 	N_t = length(selected_time)-1
@@ -130,6 +135,18 @@ begin
 	filtered_cos_reco = [sum(filtered_amps.*cos.(filtered_omegas*t)) for t in shifted_time]
 end;
 
+# ╔═╡ 3edc7820-70e5-4128-a472-a7ab7a1c095f
+begin
+	fig3 = Figure(size = (600,900))
+	ax3 = Axis(fig3[1,1],xlabel="t",title="reconstruction")
+	lines!(ax3,shifted_time,selected_eta[1:end-1],label="orig.")
+	lines!(ax3,shifted_time,filtered_cos_reco, label="filtered cos_reco")
+	axislegend(position = :lb)
+	ax3_5 = Axis(fig3[2,1],xlabel="ω",ylabel="amp",title="coefficients")
+	lines!(ax3_5,filtered_omegas,filtered_amps)
+	fig3
+end
+
 # ╔═╡ 4f9c2646-6552-4cfa-9ff8-b8eefba7de86
 begin
 	phases = zeros(size(filtered_amps))
@@ -152,23 +169,6 @@ begin
 	irreg_wave = IrregWave(filtered_amps[2:end],filtered_omegas[2:end],phases[2:end],hasFadeIn=true,inflowDepth=0.3)
 	irreg_eta = -1/9.81*[analyticPotential_dt(0,0,t,0.3,irreg_wave) for t in shifted_time]
 end;
-
-# ╔═╡ 1ecbc240-6615-4249-8032-f569f1fb8524
-begin 
-	lines(selected_time,selected_eta)
-end
-
-# ╔═╡ 3edc7820-70e5-4128-a472-a7ab7a1c095f
-begin
-	fig3 = Figure(size = (600,900))
-	ax3 = Axis(fig3[1,1],xlabel="t",title="reconstruction")
-	lines!(ax3,shifted_time,selected_eta[1:end-1],label="orig.")
-	lines!(ax3,shifted_time,filtered_cos_reco, label="filtered cos_reco")
-	axislegend(position = :lb)
-	ax3_5 = Axis(fig3[2,1],xlabel="ω",ylabel="amp",title="coefficients")
-	lines!(ax3_5,filtered_omegas,filtered_amps)
-	fig3
-end
 
 # ╔═╡ 3ac0bd7a-0248-4e18-b64e-32ec0d9c7404
 save_data = false

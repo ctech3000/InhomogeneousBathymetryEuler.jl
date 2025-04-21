@@ -79,6 +79,11 @@ getFreq(wave::SimpleWave) = wave.freq
 getFreq(wave::IrregWave) = wave.dom_freq
 getAmp(wave::SimpleWave) = wave.amp
 getAmp(wave::IrregWave) = wave.dom_amp
+getWavenumber(wave::SimpleWave) = wave.waveNumberAtInflow
+function getWavenumber(wave::IrregWave) 
+    amps = [getAmp(cWave) for cWave in wave.waveList]
+    return wave.waveList[argmax(amps)].waveNumberAtInflow
+end
 
 struct Bathymetry
     points::Vector{Float64}

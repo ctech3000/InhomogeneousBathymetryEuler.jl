@@ -240,3 +240,28 @@ end
 function transformedAnalyticPotential_dt(χ::Vector{T}, σ::Vector{T}, t::Real, h::Real, wave::AbstractWave, trans::σTransform) where T<:Real
     return transformedAnalyticPotential_dt.(χ,σ,(t,),(h,),(wave,),(trans,))
 end
+
+function analyticEtaSimulated(x::Real,t::Real,h::Real,wave::SimpleWave)
+    v_p = getFreq(wave)/getWavenumber(wave)
+    if x > v_p*t
+        return 0.0
+    else
+        if t-x/v_p <= 0
+            return 0.0
+        else
+            return -1/GRAV*analyticPotential_dt(0,0,t-x/v_p,h,wave)
+        end
+    end
+end
+
+function analyticEtaSimulated(x::Real,t::Real,h::Real,wave::IrregWave)
+    eta = 0.0
+    for cWave in wave.waveList
+        eta += analyticEtaSimulated(x,t,h,cWave)
+    end
+    return eta
+end
+
+function analyticEtaSimulated(x::Vector{T}, t::Real, h::Real, wave::AbstractWave) where T<:Real
+    return analyticEtaSimulated.(x,(t,),(h,),(wave,))
+end
